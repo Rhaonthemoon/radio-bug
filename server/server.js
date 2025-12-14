@@ -7,11 +7,28 @@ const path = require('path');
 const passport = require('./config/passport');
 
 const app = express();
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'https://radio-bug-ui.onrender.com',
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
-// ==================== MIDDLEWARE ====================
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true
+  origin: function(origin, callback) {
+    // Permetti richieste senza origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
