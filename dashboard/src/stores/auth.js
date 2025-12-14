@@ -76,10 +76,8 @@ export const useAuthStore = defineStore('auth', {
                 this.token = token
                 localStorage.setItem('token', token)
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-
-                // Recupera i dati utente
-                const apiUrl = import.meta.env.VITE_API_URL || 'https://radio-bug-api.onrender.com'
-                const response = await axios.get(`${apiUrl}/auth/me`)
+                console.log("apiurl",API_URL)
+                const response = await axios.get(`${API_URL}/auth/me`)
                 this.user = response.data
 
                 return response.data
