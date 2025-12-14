@@ -71,6 +71,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresArtist: true }
     },
     {
+      path: '/artist/my-shows',
+      name: 'artist-shows',
+      component: () => import('../views/artist/ShowsView.vue'),
+      meta: { requiresAuth: true, requiresArtist: true }
+    },
+    {
       path: '/streaming',
       name: 'Streaming',
       component: StreamingView,
