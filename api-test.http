@@ -1,0 +1,120 @@
+### Artist Management API Tests
+
+### 1. Registrazione Artista
+POST http://localhost:3000/api/register
+Content-Type: application/json
+
+{
+  "email": "rhaonthemoon@gmail.com",
+  "password": "password123",
+  "name": "Raffaele Pastura",
+  "artistName": "Rha"
+}
+
+### 2. Login Artista
+POST http://localhost:3000/api/login
+Content-Type: application/json
+
+{
+  "email": "rhaonthemoon@gmail.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("auth_token", response.body.token);
+%}
+
+### 3. Crea Show (Bozza)
+POST http://localhost:3000/api/shows
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Concerto Rock 2025",
+  "description": "Serata rock incredibile con band emergenti",
+  "date": "2025-12-31T20:00:00Z",
+  "venue": "Teatro Grande Milano",
+  "status": "draft"
+}
+
+> {%
+    client.global.set("show_id", response.body._id);
+%}
+
+### 4. Lista Show dell'Artista
+GET http://localhost:3000/api/shows
+Authorization: Bearer {{auth_token}}
+
+### 5. Aggiorna Show
+PUT http://localhost:3000/api/shows/{{show_id}}
+Content-Type: application/json
+Authorization: Bearer {{auth_token}}
+
+{
+  "title": "Concerto Rock 2025 - AGGIORNATO",
+  "description": "Serata rock con ospiti speciali!",
+  "status": "pending"
+}
+
+### 6. Elimina Show
+DELETE http://localhost:3000/api/shows/69090dcf99e9162cf205da8c
+Authorization: Bearer {{auth_token}}
+
+### ==========================================
+### ADMIN TESTS
+### ==========================================
+
+### 7. Registrazione Admin (temporaneo - da rimuovere in produzione)
+POST http://localhost:3000/api/register
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "admin123",
+  "name": "Admin User",
+  "role": "admin"
+}
+
+### 8. Login Admin
+POST http://localhost:3000/api/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "admin123"
+}
+
+> {%
+    client.global.set("admin_token", response.body.token);
+%}
+
+### 9. Admin - Lista Show in Attesa
+GET http://localhost:3000/api/admin/shows/pending
+Authorization: Bearer {{admin_token}}
+
+### 10. Admin - Approva Show
+PUT http://localhost:3000/api/admin/shows/{{show_id}}/status
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "status": "approved",
+  "adminNotes": "Show approvato! Ottima proposta."
+}
+
+### 11. Admin - Rifiuta Show
+PUT http://localhost:3000/api/admin/shows/{{show_id}}/status
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "status": "rejected",
+  "adminNotes": "Mancano informazioni sul venue"
+}
+
+### ==========================================
+### TEST RAPIDI
+### ==========================================
+
+### Test Health Check (aggiungi questa route al server se vuoi)
+GET http://localhost:3000/api/health

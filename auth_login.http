@@ -1,0 +1,60 @@
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+/**
+ * Middleware per verificare il token JWT - VERSIONE DEBUG
+ */
+const authMiddleware = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Token mancante' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key_change_me');
+    
+    // 🔍 DEBUG: Vediamo cosa c'è nel token
+    console.log('🔍 Token decodificato:', decoded);
+    console.log('🔍 Cerco user con ID:', decoded.id);
+    
+    req.user = await User.findById(decoded.id);
+    
+    if (!req.user) {
+      console.log('❌ Utente non trovato con ID:', decoded.id);
+      return res.status(401).json({ error: 'Utente non trovato' });
+    }
+    
+    console.log('✅ Utente trovato:', req.user.email, 'Role:', req.user.role);
+    next();
+  } catch (error) {
+    console.log('❌ Errore nel middleware:', error.message);
+    res.status(401).json({ error: 'Token non valido' });
+  }
+};
+
+/**
+ * Middleware per verificare che l'utente sia admin
+ */
+const adminMiddleware = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Accesso negato - Solo admin' });
+  }
+  next();
+};
+
+/**
+ * Middleware per verificare che l'utente sia artista
+ */
+const artistMiddleware = (req, res, next) => {
+  if (req.user.role !== 'artist') {
+    return res.status(403).json({ error: 'Accesso negato - Solo artisti' });
+  }
+  next();
+};
+
+module.exports = {
+  authMiddleware,
+  adminMiddleware,
+  artistMiddleware
+};
