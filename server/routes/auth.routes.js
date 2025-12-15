@@ -128,7 +128,6 @@ router.get('/google/callback',
       failureRedirect: '/login?error=google_auth_failed'
     }),
     (req, res) => {
-      console.log("log",`${process.env.FRONTEND_URL}/auth/callback?token=[token]`)
       try {
         // Genera token JWT per l'utente autenticato
         const token = jwt.sign(
