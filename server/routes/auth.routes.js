@@ -139,7 +139,7 @@ router.get('/google/callback',
         // Redirect al frontend con il token
         // Modifica questo URL in base alla tua configurazione frontend
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:8080';
-        console.log("log",frontendURL)
+        console.log("log",`${frontendURL}/auth/callback?token=${token}`)
         setTimeout(() => {
           res.redirect(`${frontendURL}/auth/callback?token=${token}`);
         }, 10000)
