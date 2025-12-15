@@ -139,9 +139,7 @@ router.get('/google/callback',
         // Redirect al frontend con il token
         // Modifica questo URL in base alla tua configurazione frontend
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:8080';
-        setTimeout(() => {
-          res.redirect(`${frontendURL}/auth/callback?token=${token}`);
-        }, 10000)
+        res.redirect(`${frontendURL}/auth/callback?token=${token}`);
       } catch (error) {
         console.error('Errore callback Google:', error);
         res.redirect('/login?error=token_generation_failed');
