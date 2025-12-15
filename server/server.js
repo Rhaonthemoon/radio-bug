@@ -31,7 +31,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use('/dashboard', express.static(path.join(__dirname, 'dashboard')))
 
+app.get('/dashboard/*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard/index.html'))
+})
 // Inizializza Passport
 app.use(passport.initialize());
 
