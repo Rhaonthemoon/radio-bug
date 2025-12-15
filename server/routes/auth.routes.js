@@ -128,6 +128,7 @@ router.get('/google/callback',
       failureRedirect: '/login?error=google_auth_failed'
     }),
     (req, res) => {
+      console.log("log",`${process.env.FRONTEND_URL}/auth/callback?token=[token]`)
       try {
         // Genera token JWT per l'utente autenticato
         const token = jwt.sign(
@@ -139,7 +140,6 @@ router.get('/google/callback',
         // Redirect al frontend con il token
         // Modifica questo URL in base alla tua configurazione frontend
         const frontendURL = process.env.FRONTEND_URL || 'http://localhost:8080';
-        console.log("log",`${frontendURL}/auth/callback?token=${token}`)
         setTimeout(() => {
           res.redirect(`${frontendURL}/auth/callback?token=${token}`);
         }, 10000)
