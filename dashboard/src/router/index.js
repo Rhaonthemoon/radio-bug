@@ -2,9 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import StreamingView from "@/views/admin/StreamingView.vue";
 
-console.log(import.meta.env)
 const router = createRouter({
-  history: createWebHistory('/dashboard/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
