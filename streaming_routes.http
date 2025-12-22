@@ -1,0 +1,127 @@
+### ==================== VARIABILI ====================
+@baseURL = http://localhost:3000/api/admin/streaming
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5MDlmYjQ2NTc5NmJmOGVmMDRiMDkwOSIsImlhdCI6MTc2Mzg0Mzc4OH0.K24rRWvfAbKa7OPhrT_rwrFhbGNesrT0iWaxm5V1Lww
+@episodeId = YOUR_EPISODE_ID_HERE
+
+### ==================== ROTTE INFO STREAMING ====================
+
+### GET Live Info - Informazioni stream in diretta
+GET {{baseURL}}/live-info-test
+Authorization: Bearer {{token}}
+
+###
+
+### GET Current Show - Show attualmente in onda
+GET {{baseURL}}/current-show
+Authorization: Bearer {{token}}
+
+###
+
+### GET Week Schedule - Palinsesto settimanale
+GET {{baseURL}}/week-schedule
+Authorization: Bearer {{token}}
+
+###
+
+### GET Statistics - Statistiche streaming
+GET {{baseURL}}/statistics
+Authorization: Bearer {{token}}
+
+###
+
+### ==================== ROTTE EPISODI ====================
+
+### GET Uploaded Episodes - Lista episodi caricati sul server
+GET {{baseURL}}/uploaded-episodes
+Authorization: Bearer {{token}}
+
+###
+
+### GET Download Episode - Scarica file episodio
+# Sostituisci {{episodeId}} con l'ID effettivo
+GET {{baseURL}}/episodes/{{episodeId}}/download
+Authorization: Bearer {{token}}
+
+###
+
+### DELETE Episode File - Elimina file episodio dal server
+# Sostituisci {{episodeId}} con l'ID effettivo
+DELETE {{baseURL}}/episodes/{{episodeId}}/file
+Authorization: Bearer {{token}}
+
+###
+
+### POST Mark Episode as Uploaded - Segna episodio come caricato su Airtime
+# Sostituisci {{episodeId}} con l'ID effettivo
+POST {{baseURL}}/episodes/{{episodeId}}/mark-uploaded
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "airtimeFileId": "12345"
+}
+
+###
+
+### POST Schedule Episode - Info sulla schedulazione episodio
+# Sostituisci {{episodeId}} con l'ID effettivo
+POST {{baseURL}}/episodes/{{episodeId}}/schedule
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "airDate": "2024-12-25",
+  "timeSlot": "20:00",
+  "showInstanceId": "show_instance_123"
+}
+
+###
+
+### DELETE Remove from Schedule - Aggiorna stato schedulazione
+# Sostituisci {{episodeId}} con l'ID effettivo
+DELETE {{baseURL}}/episodes/{{episodeId}}/schedule
+Authorization: Bearer {{token}}
+
+###
+
+### ==================== ROTTE UTILITY ====================
+
+### GET Test Connection - Test connessione ad Airtime
+GET {{baseURL}}/test-connection
+Authorization: Bearer {{token}}
+
+###
+
+### ==================== NOTE D'USO ====================
+# 
+# 1. PRIMA DI INIZIARE:
+#    - Sostituisci YOUR_JWT_TOKEN_HERE con il tuo token JWT valido
+#    - Sostituisci YOUR_EPISODE_ID_HERE con un ID episodio reale
+#    - Modifica baseURL se il tuo server è su porta/host diversi
+#
+# 2. COME OTTENERE IL TOKEN:
+#    - Fai login tramite /api/auth/login
+#    - Copia il token dalla risposta
+#    - Sostituiscilo nella variabile @token
+#
+# 3. ORDINE CONSIGLIATO PER I TEST:
+#    a) Test Connection - verifica connessione ad Airtime
+#    b) Live Info - controlla se lo streaming è attivo
+#    c) Current Show - vedi cosa sta andando in onda
+#    d) Week Schedule - visualizza palinsesto
+#    e) Statistics - vedi statistiche streaming
+#    f) Uploaded Episodes - lista degli episodi caricati
+#
+# 4. WORKFLOW EPISODI:
+#    1. Upload manuale file su Airtime
+#    2. Mark as Uploaded - segna come caricato (fornisci airtimeFileId)
+#    3. Schedule - info sulla schedulazione (da fare manualmente su Airtime)
+#    4. Download - scarica file se necessario
+#    5. Delete - elimina file dal server quando non serve più
+#
+# 5. NOTE IMPORTANTI:
+#    - Tutte le rotte richiedono autenticazione admin
+#    - Le operazioni su Airtime (upload/schedule) vanno fatte manualmente via dashboard
+#    - Il sistema traccia solo lo stato locale degli episodi
+#
+###
