@@ -1,29 +1,54 @@
 const nodemailer = require('nodemailer');
 
 /**
- * Configurazione SMTP per IONOS
+ * Configurazione Email con SendGrid
+ * Funziona perfettamente su Render (anche free tier)
  */
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.ionos.it',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_PORT === '465',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+
+// Determina quale servizio usare
+const useSendGrid = process.env.USE_SENDGRID === 'true' || process.env.SENDGRID_API_KEY;
+
+let transporter;
+
+if (useSendGrid) {
+    // ===== SENDGRID CONFIGURATION =====
+    console.log('📧 Using SendGrid for emails');
+
+    transporter = nodemailer.createTransport({
+        host: 'smtp.sendgrid.net',
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: 'apikey', // Sempre 'apikey' per SendGrid
+            pass: process.env.SENDGRID_API_KEY
+        }
+    });
+} else {
+    // ===== IONOS SMTP CONFIGURATION (per sviluppo locale) =====
+    console.log('📧 Using IONOS SMTP for emails');
+
+    transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.ionos.it',
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_PORT === '465',
+        auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASSWORD
+        },
+        tls: {
+            rejectUnauthorized: false
+        }
+    });
+}
 
 /**
  * Verifica la connessione SMTP
  */
 transporter.verify(function(error, success) {
     if (error) {
-        console.error('❌ Errore connessione SMTP:', error);
+        console.error('❌ Errore connessione email:', error.message);
     } else {
-        console.log('✅ Server SMTP pronto per inviare email');
+        console.log('✅ Server email pronto per inviare');
     }
 });
 
@@ -34,7 +59,7 @@ const sendVerificationEmail = async (email, name, verificationToken) => {
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
-        from: `"BUG Radio" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: email,
         subject: 'Confirm Your Account - BUG Radio',
         html: `
@@ -89,7 +114,7 @@ const sendVerificationEmail = async (email, name, verificationToken) => {
  */
 const sendWelcomeEmail = async (email, name) => {
     const mailOptions = {
-        from: `"BUG Radio" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: email,
         subject: 'Welcome to BUG Radio! 🎉',
         html: `
@@ -143,7 +168,7 @@ const sendShowApprovedEmail = async (email, artistName, showTitle, showSlug, adm
     const dashboardUrl = `${process.env.FRONTEND_URL}/artist/dashboard`;
 
     const mailOptions = {
-        from: `"BUG Radio" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: email,
         subject: `🎉 Your Show "${showTitle}" Has Been Approved!`,
         html: `
@@ -177,13 +202,7 @@ const sendShowApprovedEmail = async (email, artistName, showTitle, showSlug, adm
               </div>
             ` : ''}
             <h3 style="margin-top: 30px;">What's Next?</h3>
-            <p>You can now start uploading episodes for your show! Here's what you can do:</p>
-            <ul style="line-height: 1.8;">
-              <li>📤 <strong>Upload your first episode</strong></li>
-              <li>✏️ <strong>Edit show details</strong> anytime</li>
-              <li>📊 <strong>Track your show's performance</strong></li>
-              <li>🎵 <strong>Manage your content</strong></li>
-            </ul>
+            <p>You can now start uploading episodes for your show!</p>
             <div style="margin-top: 30px; text-align: center;">
               <a href="${showUrl}" class="button">Upload Episodes</a>
               <a href="${dashboardUrl}" class="button" style="background: #6b7280;">Go to Dashboard</a>
@@ -213,7 +232,7 @@ const sendShowRejectedEmail = async (email, artistName, showTitle, adminNotes) =
     const dashboardUrl = `${process.env.FRONTEND_URL}/artist/dashboard`;
 
     const mailOptions = {
-        from: `"BUG Radio" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: email,
         subject: `Update on Your Show Request: "${showTitle}"`,
         html: `
@@ -234,21 +253,14 @@ const sendShowRejectedEmail = async (email, artistName, showTitle, adminNotes) =
           <div class="header"><h1>📋 Show Request Update</h1></div>
           <div class="content">
             <h2>Hello ${artistName},</h2>
-            <p>Thank you for your interest in creating a show on BUG Radio. We've reviewed your submission for:</p>
+            <p>Thank you for your interest in creating a show on BUG Radio.</p>
             <h3 style="color: #667eea; margin-top: 20px;">📻 ${showTitle}</h3>
             <p>Unfortunately, we're unable to approve your show at this time. Please see the feedback below:</p>
             <div class="admin-notes">
               <strong>📝 Feedback from our team:</strong>
               <p style="margin: 10px 0 0;">${adminNotes}</p>
             </div>
-            <h3 style="margin-top: 30px;">What You Can Do:</h3>
-            <ul style="line-height: 1.8;">
-              <li>📝 <strong>Review the feedback</strong> carefully</li>
-              <li>✏️ <strong>Make necessary changes</strong> to your show concept</li>
-              <li>🔄 <strong>Submit a new request</strong> when ready</li>
-              <li>💬 <strong>Contact us</strong> if you have questions</li>
-            </ul>
-            <p style="margin-top: 20px;">We encourage you to refine your show based on our feedback and submit again. We're here to help you succeed!</p>
+            <p style="margin-top: 20px;">We encourage you to refine your show based on our feedback and submit again!</p>
             <div style="text-align: center;">
               <a href="${dashboardUrl}" class="button">Go to Dashboard</a>
             </div>
@@ -276,7 +288,7 @@ const sendPasswordResetEmail = async (email, name, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
     const mailOptions = {
-        from: `"BUG Radio" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: email,
         subject: 'Reset Your Password - BUG Radio',
         html: `
@@ -309,7 +321,6 @@ const sendPasswordResetEmail = async (email, name, resetToken) => {
               <ul style="margin: 10px 0 0; padding-left: 20px;">
                 <li>This link expires in <strong>1 hour</strong></li>
                 <li>If you didn't request this reset, ignore this email</li>
-                <li>Your password won't change until you create a new one</li>
               </ul>
             </div>
           </div>
@@ -334,7 +345,7 @@ const sendPasswordResetEmail = async (email, name, resetToken) => {
  */
 const sendPasswordChangedEmail = async (email, name) => {
     const mailOptions = {
-        from: `"BUG Radio" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
         to: email,
         subject: 'Your Password Has Been Changed - BUG Radio',
         html: `
@@ -359,18 +370,11 @@ const sendPasswordChangedEmail = async (email, name) => {
             <p><strong>Changed on:</strong> ${new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })}</p>
             <div class="alert-box">
               <p style="margin: 0;"><strong>⚠️ Didn't make this change?</strong></p>
-              <p style="margin: 10px 0 0;">If you didn't change your password, please contact our support team immediately to secure your account.</p>
+              <p style="margin: 10px 0 0;">If you didn't change your password, please contact support immediately.</p>
             </div>
-            <p>You can now log in to BUG Radio with your new password:</p>
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL}/login" class="button">Log In</a>
             </div>
-            <p style="margin-top: 30px;"><strong>Security Tips:</strong></p>
-            <ul>
-              <li>Use a unique password for BUG Radio</li>
-              <li>Never share your password with anyone</li>
-              <li>Enable two-factor authentication if available</li>
-            </ul>
           </div>
         </div>
       </body>
