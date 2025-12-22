@@ -118,25 +118,34 @@ const googleLoading = ref(false)
 
 const handleRegister = async () => {
   try {
-    await authStore.register(formData.value)
-    toast.add({
-      severity: 'success',
-      summary: 'Registration Successful',
-      detail: `Welcome ${authStore.userName}!`,
-      life: 3000
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+    const response = await fetch(`${apiUrl}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formData.value)
     })
 
-    // Redirect based on role
-    if (authStore.user?.role === 'admin') {
-      router.push('/shows')
+    const data = await response.json()
+
+    if (response.ok) {
+      // ✅ REDIRECT alla pagina check-email
+      router.push(`/check-email?email=${encodeURIComponent(formData.value.email)}`)
     } else {
-      router.push('/artist/dashboard')
+      toast.add({
+        severity: 'error',
+        summary: 'Errore',
+        detail: data.error || 'Registrazione fallita',
+        life: 3000
+      })
     }
   } catch (error) {
+    console.error('Errore registrazione:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: authStore.error || 'Registration failed',
+      summary: 'Errore',
+      detail: 'Errore di connessione',
       life: 3000
     })
   }
@@ -146,7 +155,7 @@ const handleGoogleSignUp = () => {
   googleLoading.value = true
   // Redirect al backend per Google OAuth
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-  window.location.href = `${apiUrl}/api/auth/google`
+  window.location.href = `${apiUrl}/auth/google`
 }
 </script>
 

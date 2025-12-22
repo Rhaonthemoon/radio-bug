@@ -1,150 +1,114 @@
 const mongoose = require('mongoose');
 
-const EpisodeSchema = new mongoose.Schema({
-    // Riferimento allo show
+const episodeSchema = new mongoose.Schema({
     showId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Show',
         required: true
     },
-
-    // Informazioni Episodio
     title: {
         type: String,
         required: true,
         trim: true
     },
-
-    episodeNumber: {
-        type: Number,
-        // Numero episodio (opzionale, utile per serie)
-    },
-
     description: {
         type: String,
-        required: true
+        trim: true
     },
-
-    // Immagine episodio (diversa da quella dello show)
-    image: {
-        url: String,
-        alt: String
-    },
-
-    // Data di messa in onda
     airDate: {
         type: Date,
         required: true
     },
-
-    // Generi musicali (possono essere diversi da quelli dello show)
-    genres: [String],
-
-    // Mixcloud Player
-    mixcloudUrl: {
-        type: String,
-        required: true,
-        trim: true
-        // Es: https://www.mixcloud.com/username/episode-name/
+    duration: {
+        type: Number, // in minuti
+        min: 0
     },
-
-    // Status
     status: {
         type: String,
         enum: ['draft', 'published', 'archived'],
         default: 'draft'
     },
-
-    // Featured (episodio in evidenza)
     featured: {
         type: Boolean,
         default: false
     },
 
-    // Stats
-    stats: {
-        plays: {
-            type: Number,
-            default: 0
-        },
-        likes: {
-            type: Number,
-            default: 0
+    // ✅ Campo per file audio locale
+    audioFile: {
+        filename: String,          // nome originale del file
+        storedFilename: String,    // nome file salvato su disco
+        path: String,              // percorso completo
+        size: Number,              // dimensione in bytes
+        mimetype: String,          // tipo MIME
+        bitrate: Number,           // bitrate in kbps (es. 320)
+        duration: Number,          // durata in secondi
+        uploadedAt: Date,
+        exists: {
+            type: Boolean,
+            default: false
         }
     },
 
-    // Metadata
-    createdAt: {
-        type: Date,
-        default: Date.now
+    // Link esterni (opzionali)
+    externalLinks: {
+        mixcloudUrl: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function(v) {
+                    if (!v) return true;
+                    return /^https?:\/\/(www\.)?mixcloud\.com\/.+/.test(v);
+                },
+                message: 'Invalid Mixcloud URL'
+            }
+        },
+        youtubeUrl: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function(v) {
+                    if (!v) return true;
+                    return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/.test(v);
+                },
+                message: 'Invalid YouTube URL'
+            }
+        },
+        spotifyUrl: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function(v) {
+                    if (!v) return true;
+                    return /^https?:\/\/open\.spotify\.com\/.+/.test(v);
+                },
+                message: 'Invalid Spotify URL'
+            }
+        }
     },
 
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    },
-
+    // Metadati
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
-    }, localFile: {
-        path: {
-            type: String,
-            default: null
-        },
-        filename: String,
-        size: Number,
-        duration: Number,
-        format: String,
-        bitrate: Number,
-        uploadedAt: Date,
-        exists: {
-            type: Boolean,
-            default: true
-        },
-        deletedAt: Date
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     },
 
-    // Airtime configuration
-    airtime: {
-        fileId: {
-            type: String,
-            default: null
-        },
-        uploaded: {
-            type: Boolean,
-            default: false
-        },
-        uploadedAt: Date,
-        uploadedBy: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
-        scheduleId: {
-            type: String,
-            default: null
-        },
-        scheduledAt: Date,
-        lastError: String,
-        uploadFailed: {
-            type: Boolean,
-            default: false
-        }
+    // Stats
+    stats: {
+        plays: { type: Number, default: 0 },
+        downloads: { type: Number, default: 0 }
     }
 }, {
     timestamps: true
 });
 
-// Middleware per aggiornare updatedAt
-EpisodeSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    next();
-});
+// Index per query efficienti
+episodeSchema.index({ showId: 1, airDate: -1 });
+episodeSchema.index({ status: 1 });
+episodeSchema.index({ title: 'text', description: 'text' });
 
-// Indici
-EpisodeSchema.index({ showId: 1, airDate: -1 });
-EpisodeSchema.index({ status: 1 });
-EpisodeSchema.index({ featured: 1 });
-
-module.exports = mongoose.model('Episode', EpisodeSchema);
+module.exports = mongoose.model('Episode', episodeSchema);

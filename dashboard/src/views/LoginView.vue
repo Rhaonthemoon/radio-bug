@@ -36,7 +36,9 @@
                   class="w-full"
               />
             </div>
-
+            <div class="forgot-link">
+              <router-link to="/forgot-password">Forgot password?</router-link>
+            </div>
             <Button
                 type="submit"
                 label="Login"
@@ -212,6 +214,20 @@ const handleGoogleLogin = () => {
 }
 
 .register-link a:hover {
+  text-decoration: underline;
+}
+.forgot-link {
+  text-align: right;
+  margin: -0.5rem 0 1rem;
+}
+
+.forgot-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.forgot-link a:hover {
   text-decoration: underline;
 }
 </style>

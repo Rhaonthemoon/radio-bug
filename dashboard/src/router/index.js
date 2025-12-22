@@ -24,7 +24,26 @@ const router = createRouter({
       name: 'auth-callback',
       component: () => import('../views/CallbackView.vue')
     },
-
+    {
+      path: '/check-email',
+      name: 'check-email',
+      component: () => import('../views/CheckEmailView.vue')
+    },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('../views/VerifyEmailView.vue')
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('../views/ForgotPasswordView.vue')
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('../views/ResetPasswordView.vue')
+    },
     // ==================== ADMIN ROUTES ====================
     {
       path: '/dashboard',
@@ -50,7 +69,24 @@ const router = createRouter({
       component: () => import('../views/admin/RequestsView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true }
     },
-
+    {
+      path: '/admin/posts',
+      name: 'admin-posts',
+      component: () => import('../views/admin/PostsListView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/posts/create',  // ← Questa manca!
+      name: 'admin-posts-create',
+      component: () => import('../views/admin/PostFormView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/admin/posts/edit/:id',  // ← Anche questa!
+      name: 'admin-posts-edit',
+      component: () => import('../views/admin/PostFormView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
     // ==================== ARTIST ROUTES ====================
     {
       path: '/artist/dashboard',
@@ -68,12 +104,6 @@ const router = createRouter({
       path: '/artist/my-episodes',
       name: 'artist-episode',
       component: () => import('../views/artist/EpisodesView.vue'),
-      meta: { requiresAuth: true, requiresArtist: true }
-    },
-    {
-      path: '/artist/my-shows',
-      name: 'artist-shows',
-      component: () => import('../views/artist/ShowsView.vue'),
       meta: { requiresAuth: true, requiresArtist: true }
     },
     {

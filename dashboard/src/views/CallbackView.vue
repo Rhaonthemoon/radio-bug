@@ -30,7 +30,6 @@ import { useAuthStore } from '../stores/auth'
 import { useToast } from 'primevue/usetoast'
 import ProgressSpinner from 'primevue/progressspinner'
 
-console.log("callback")
 const router = useRouter()
 const authStore = useAuthStore()
 const toast = useToast()

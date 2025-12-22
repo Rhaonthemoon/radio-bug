@@ -113,6 +113,11 @@ const adminMenuItems = [
     to: '/episodes'
   },
   {
+    label: 'Posts',
+    icon: 'pi pi-image',
+    to: '/admin/posts'
+  },
+    {
     label: 'Requests',
     icon: 'pi pi-inbox',
     to: '/requests',
@@ -132,11 +137,6 @@ const artistMenuItems = [
     label: 'My Requests',
     icon: 'pi pi-home',
     to: '/artist/dashboard'
-  },
-  {
-    label: 'My Shows',
-    icon: 'pi pi-microphone',
-    to: '/artist/my-shows'
   },
   {
     label: 'My Episodes',

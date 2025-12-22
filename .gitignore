@@ -7,7 +7,7 @@ dist/
 build/
 
 # Ambiente
-.env
+../../../../../dev/bug-radio/.env
 .env.local
 
 # Sistema

@@ -79,14 +79,21 @@
         </Card>
       </div>
 
-      <!-- Info Box for approved shows -->
+      <!-- ✅ AGGIORNATO: Messaggio per show approvati con link a Episodes -->
       <Message v-if="artistStore.approvedCount > 0" severity="success" :closable="false" class="info-message">
         <div class="message-content">
           <i class="pi pi-check-circle"></i>
           <div>
             <strong>Congratulations!</strong> You have {{ artistStore.approvedCount }} {{ artistStore.approvedCount === 1 ? 'approved show' : 'approved shows' }}.
             <br>
-            Episodes will be managed and published by the admin.
+            <strong>✨ You can now manage your episodes!</strong>
+            <Button
+                label="Go to Episodes"
+                icon="pi pi-play-circle"
+                @click="$router.push('/artist/episodes')"
+                size="small"
+                class="mt-2"
+            />
           </div>
         </div>
       </Message>
@@ -199,7 +206,7 @@
           <p v-if="selectedRequest.tags?.length"><strong>Tags:</strong> {{ selectedRequest.tags.join(', ') }}</p>
         </div>
 
-        <!-- Artist Photo and Info -->
+        <!-- Artist Info -->
         <div class="detail-section">
           <h3>Artist</h3>
           <div v-if="selectedRequest.artist?.photo" style="margin-bottom: 1rem;">
@@ -234,7 +241,7 @@
           <p><strong>Time:</strong> {{ selectedRequest.schedule.timeSlot }}</p>
         </div>
 
-        <!-- Status and Admin Notes -->
+        <!-- Admin Response -->
         <div class="detail-section" v-if="selectedRequest.requestStatus !== 'pending'">
           <h3>💬 Admin Response</h3>
           <p v-if="selectedRequest.adminNotes" class="admin-notes">{{ selectedRequest.adminNotes }}</p>
@@ -260,9 +267,9 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useArtistStore } from '../../stores/artist'
+import { useArtistStore } from '@/stores/artist.js'
 import { useToast } from 'primevue/usetoast'
-import DashboardLayout from '../../components/DashboardLayout.vue'
+import DashboardLayout from '@/components/DashboardLayout.vue'
 
 const artistStore = useArtistStore()
 const toast = useToast()
@@ -328,6 +335,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* Stessi stili del file originale */
 .welcome-card {
   margin-bottom: 2rem;
 }
@@ -540,5 +548,9 @@ onMounted(async () => {
 
 .social-links a:hover {
   text-decoration: underline;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
 }
 </style>

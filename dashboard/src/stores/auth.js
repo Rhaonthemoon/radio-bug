@@ -76,7 +76,8 @@ export const useAuthStore = defineStore('auth', {
                 this.token = token
                 localStorage.setItem('token', token)
                 axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-                console.log("apiurl",API_URL)
+
+                // Recupera i dati utente
                 const response = await axios.get(`${API_URL}/auth/me`)
                 this.user = response.data
 
