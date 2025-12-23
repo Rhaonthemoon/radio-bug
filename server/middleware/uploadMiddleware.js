@@ -67,7 +67,7 @@ const validateMP3Bitrate = async (req, res, next) => {
     console.log(`✓ Durata: ${duration} secondi`);
 
     // ✅ VALIDAZIONE: Accetta bitrate >= 256 kbps (con tolleranza per VBR)
-    if (bitrate < 320) {
+    if (bitrate < 256) {
       // Elimina il file se non soddisfa i requisiti
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
