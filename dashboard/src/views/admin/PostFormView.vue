@@ -8,7 +8,7 @@
             icon="pi pi-times"
             text
             rounded
-            @click="$router.back()"
+            @click="goBack"
           />
         </div>
       </template>
@@ -165,7 +165,8 @@
               icon="pi pi-times"
               severity="secondary"
               outlined
-              @click="$router.back()"
+              @click="goBack"
+              type="button"
             />
             <Button
               type="submit"
@@ -274,7 +275,8 @@ const loadPost = async () => {
       detail: 'Failed to load post',
       life: 3000
     })
-    router.back()
+    // Usa router.push invece di router.back()
+    router.push('/admin/posts')
   }
 }
 
@@ -380,6 +382,11 @@ const handleImageError = (event) => {
   })
 }
 
+const goBack = () => {
+  // Usa router.push invece di router.back() per evitare errori
+  router.push('/admin/posts')
+}
+
 const handleSubmit = async () => {
   // Validate - immagine richiesta solo al create
   if (!isEditMode.value && !imageFile.value && !formData.image) {
@@ -437,6 +444,7 @@ const handleSubmit = async () => {
       life: 3000
     })
 
+    // Usa router.push invece di router.back()
     router.push('/admin/posts')
 
   } catch (error) {

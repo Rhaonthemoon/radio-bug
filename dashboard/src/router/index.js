@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import StreamingView from "@/views/admin/StreamingView.vue";
+import StreamingView from "@/views/admin/StreamingView.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -69,23 +69,34 @@ const router = createRouter({
       component: () => import('../views/admin/RequestsView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true }
     },
+    // ==================== POSTS ROUTES ====================
     {
       path: '/admin/posts',
       name: 'admin-posts',
-      component: () => import('../views/admin/PostsListView.vue'),
+      component: () => import('../views/admin/PostsListView.vue'),  // ← CORRETTO: PostsListView
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: '/admin/posts/create',  // ← Questa manca!
+      path: '/admin/posts/new',
       name: 'admin-posts-create',
       component: () => import('../views/admin/PostFormView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-      path: '/admin/posts/edit/:id',  // ← Anche questa!
+      path: '/admin/posts/:id',
       name: 'admin-posts-edit',
       component: () => import('../views/admin/PostFormView.vue'),
       meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    // ==================== STREAMING ====================
+    {
+      path: '/streaming',
+      name: 'Streaming',
+      component: StreamingView,
+      meta: {
+        requiresAuth: true,
+        requiresAdmin: true
+      }
     },
     // ==================== ARTIST ROUTES ====================
     {
@@ -105,15 +116,6 @@ const router = createRouter({
       name: 'artist-episode',
       component: () => import('../views/artist/EpisodesView.vue'),
       meta: { requiresAuth: true, requiresArtist: true }
-    },
-    {
-      path: '/streaming',
-      name: 'Streaming',
-      component: StreamingView,
-      meta: {
-        requiresAuth: true,
-        requiresAdmin: true
-      }
     }
   ]
 })
