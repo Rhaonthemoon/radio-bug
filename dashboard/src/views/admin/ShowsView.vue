@@ -275,7 +275,97 @@
             />
           </div>
         </div>
+        <!-- Social Links Section -->
+        <div class="form-section">
+          <h3>Social Links</h3>
+          <p class="section-description">Add social media profiles (optional)</p>
 
+          <div class="social-grid">
+            <!-- Instagram -->
+            <div class="form-field">
+              <label for="instagram">
+                <i class="pi pi-instagram" style="color: #E4405F;"></i>
+                Instagram
+              </label>
+              <InputText
+                id="instagram"
+                v-model="formData.artist.socialLinks.instagram"
+                placeholder="https://instagram.com/username"
+                class="w-full"
+              />
+            </div>
+
+            <!-- SoundCloud -->
+            <div class="form-field">
+              <label for="soundcloud">
+                <i class="pi pi-cloud" style="color: #FF5500;"></i>
+                SoundCloud
+              </label>
+              <InputText
+                id="soundcloud"
+                v-model="formData.artist.socialLinks.soundcloud"
+                placeholder="https://soundcloud.com/username"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Mixcloud -->
+            <div class="form-field">
+              <label for="mixcloud">
+                <i class="pi pi-volume-up" style="color: #314359;"></i>
+                Mixcloud
+              </label>
+              <InputText
+                id="mixcloud"
+                v-model="formData.artist.socialLinks.mixcloud"
+                placeholder="https://mixcloud.com/username"
+                class="w-full"
+              />
+            </div>
+
+            <!-- YouTube -->
+            <div class="form-field">
+              <label for="youtube">
+                <i class="pi pi-youtube" style="color: #FF0000;"></i>
+                YouTube
+              </label>
+              <InputText
+                id="youtube"
+                v-model="formData.artist.socialLinks.youtube"
+                placeholder="https://youtube.com/@username"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Bandcamp -->
+            <div class="form-field">
+              <label for="bandcamp">
+                <i class="pi pi-ticket" style="color: #629AA9;"></i>
+                Bandcamp
+              </label>
+              <InputText
+                id="bandcamp"
+                v-model="formData.artist.socialLinks.bandcamp"
+                placeholder="https://username.bandcamp.com"
+                class="w-full"
+              />
+            </div>
+
+            <!-- Personal Website -->
+            <div class="form-field">
+              <label for="website">
+                <i class="pi pi-globe" style="color: #3B82F6;"></i>
+                Personal Website
+              </label>
+              <InputText
+                id="website"
+                v-model="formData.artist.socialLinks.website"
+                placeholder="https://yourwebsite.com"
+                class="w-full"
+              />
+            </div>
+          </div>
+        </div>
         <div class="form-section">
           <h3>Impostazioni</h3>
 
@@ -363,7 +453,14 @@ const formData = ref({
     bio: '',
     email: '',
     photo: '',
-    socialLinks: {}
+    socialLinks: {
+      instagram: '',
+      soundcloud: '',
+      mixcloud: '',
+      youtube: '',      // ← AGGIUNGI
+      bandcamp: '',     // ← AGGIUNGI
+      website: ''       // ← AGGIUNGI
+    }
   },
   image: {
     url: '',
@@ -375,7 +472,6 @@ const formData = ref({
   status: 'active',
   featured: false
 })
-
 const genresInput = ref('')
 const tagsInput = ref('')
 
@@ -740,7 +836,34 @@ onMounted(async () => {
   color: #6b7280;
   font-size: 0.875rem;
 }
+.form-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+}
 
+.form-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.section-description {
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.social-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-field label i {
+  margin-right: 0.5rem;
+}
 .dialog-content {
   padding: 1rem 0;
 }

@@ -11,10 +11,11 @@ const ShowSchema = new mongoose.Schema({
         photo: String,
         socialLinks: {
             instagram: String,
-            facebook: String,
-            website: String,
             soundcloud: String,
-            mixcloud: String
+            mixcloud: String,
+            youtube: String,
+            bandcamp: String,
+            website: String
         }
     },
     image: {

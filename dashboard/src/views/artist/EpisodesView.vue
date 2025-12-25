@@ -261,9 +261,25 @@
         </div>
 
         <!-- Status -->
+        <!-- Status - Read-only for Artists, Editable for Admins -->
         <div class="form-group">
           <label for="status">Status *</label>
+
+          <!-- Se è un artista, mostra solo un Tag (read-only) -->
+          <div v-if="authStore.isArtist" class="status-readonly">
+            <Tag
+              :value="getStatusLabel(episodeForm.status)"
+              :severity="getStatusSeverity(episodeForm.status)"
+              style="font-size: 1rem; padding: 0.5rem 1rem;"
+            />
+            <small class="hint" style="display: block; margin-top: 0.5rem; color: #6b7280;">
+              Only administrators can change the status
+            </small>
+          </div>
+
+          <!-- Se è un admin, mostra il Dropdown normale -->
           <Dropdown
+            v-else
             id="status"
             v-model="episodeForm.status"
             :options="statusOptions"
