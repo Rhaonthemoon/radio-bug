@@ -1,8 +1,8 @@
 <template>
-  <DashboardLayout page-title="Gestione Shows">
+  <DashboardLayout page-title="Shows Management">
     <template #topbar-actions>
       <Button
-        label="Nuovo Show"
+        label="New Show"
         icon="pi pi-plus"
         @click="openDialog()"
       />
@@ -13,35 +13,35 @@
       <template #content>
         <div class="filters">
           <Button
-            :label="`Richieste Pending (${pendingRequestsCount})`"
+            :label="`Pending Requests (${pendingRequestsCount})`"
             :severity="currentFilter === 'pending' ? 'warning' : 'secondary'"
             :outlined="currentFilter !== 'pending'"
             @click="currentFilter = 'pending'"
             icon="pi pi-clock"
           />
           <Button
-            :label="`Attivi (${activeShowsCount})`"
+            :label="`Active (${activeShowsCount})`"
             :severity="currentFilter === 'active' ? 'success' : 'secondary'"
             :outlined="currentFilter !== 'active'"
             @click="currentFilter = 'active'"
             icon="pi pi-check-circle"
           />
           <Button
-            :label="`Inattivi (${inactiveShowsCount})`"
+            :label="`Inactive (${inactiveShowsCount})`"
             :severity="currentFilter === 'inactive' ? 'info' : 'secondary'"
             :outlined="currentFilter !== 'inactive'"
             @click="currentFilter = 'inactive'"
             icon="pi pi-pause"
           />
           <Button
-            :label="`Rifiutati (${rejectedRequestsCount})`"
+            :label="`Rejected (${rejectedRequestsCount})`"
             :severity="currentFilter === 'rejected' ? 'danger' : 'secondary'"
             :outlined="currentFilter !== 'rejected'"
             @click="currentFilter = 'rejected'"
             icon="pi pi-times"
           />
           <Button
-            label="Tutti"
+            label="All"
             :severity="currentFilter === 'all' ? 'contrast' : 'secondary'"
             :outlined="currentFilter !== 'all'"
             @click="currentFilter = 'all'"
@@ -66,15 +66,15 @@
           <template #empty>
             <div class="empty-state">
               <i class="pi pi-microphone" style="font-size: 3rem; color: #cbd5e1;"></i>
-              <p>Nessuno show {{ getFilterLabel() }}</p>
-              <Button label="Crea il primo show" icon="pi pi-plus" @click="openDialog()" />
+              <p>No shows {{ getFilterLabel() }}</p>
+              <Button label="Create first show" icon="pi pi-plus" @click="openDialog()" />
             </div>
           </template>
 
-          <Column field="title" header="Titolo" sortable style="min-width: 200px;"></Column>
-          <Column field="artist.name" header="Artista" sortable></Column>
+          <Column field="title" header="Title" sortable style="min-width: 200px;"></Column>
+          <Column field="artist.name" header="Artist" sortable></Column>
           <Column field="artist.email" header="Email" sortable></Column>
-          <Column field="genres" header="Generi">
+          <Column field="genres" header="Genres">
             <template #body="slotProps">
               <div class="genres-tags">
                 <Tag
@@ -90,7 +90,7 @@
               </div>
             </template>
           </Column>
-          <Column field="requestStatus" header="Status Richiesta" sortable>
+          <Column field="requestStatus" header="Request Status" sortable>
             <template #body="slotProps">
               <Tag
                 :value="getRequestStatusLabel(slotProps.data.requestStatus)"
@@ -98,7 +98,7 @@
               />
             </template>
           </Column>
-          <Column field="status" header="Status Show" sortable>
+          <Column field="status" header="Show Status" sortable>
             <template #body="slotProps">
               <Tag
                 :value="getStatusLabel(slotProps.data.status)"
@@ -114,7 +114,7 @@
               ></i>
             </template>
           </Column>
-          <Column header="Azioni" style="width: 250px;">
+          <Column header="Actions" style="width: 250px;">
             <template #body="slotProps">
               <div class="action-buttons">
                 <!-- Azioni per richieste pending -->
@@ -124,7 +124,7 @@
                   rounded
                   severity="success"
                   @click="approveRequest(slotProps.data)"
-                  v-tooltip.top="'Approva Richiesta'"
+                  v-tooltip.top="'Approve Request'"
                 />
                 <Button
                   v-if="slotProps.data.requestStatus === 'pending'"
@@ -132,7 +132,7 @@
                   rounded
                   severity="danger"
                   @click="rejectRequest(slotProps.data)"
-                  v-tooltip.top="'Rifiuta Richiesta'"
+                  v-tooltip.top="'Reject Request'"
                 />
 
                 <!-- Azioni standard -->
@@ -142,7 +142,7 @@
                   outlined
                   severity="info"
                   @click="viewShow(slotProps.data)"
-                  v-tooltip.top="'Dettagli'"
+                  v-tooltip.top="'Details'"
                 />
                 <Button
                   icon="pi pi-pencil"
@@ -150,7 +150,7 @@
                   outlined
                   severity="secondary"
                   @click="openDialog(slotProps.data)"
-                  v-tooltip.top="'Modifica'"
+                  v-tooltip.top="'Edit'"
                 />
                 <Button
                   icon="pi pi-trash"
@@ -158,7 +158,7 @@
                   outlined
                   severity="danger"
                   @click="confirmDelete(slotProps.data)"
-                  v-tooltip.top="'Elimina'"
+                  v-tooltip.top="'Delete'"
                 />
               </div>
             </template>
@@ -170,7 +170,7 @@
     <!-- Dialog Crea/Modifica Show -->
     <Dialog
       v-model:visible="dialogVisible"
-      :header="editingShow ? 'Modifica Show' : 'Nuovo Show'"
+      :header="editingShow ? 'Edit Show' : 'New Show'"
       :modal="true"
       :style="{ width: '800px' }"
       :maximizable="true"
@@ -209,17 +209,17 @@
         </div>
 
         <div class="form-section">
-          <h3>Informazioni Artista</h3>
+          <h3>Artist Information</h3>
 
           <div class="form-field">
             <ImageUpload
-              label="Foto Artista"
+              label="Artist Photo"
               v-model="formData.artist.photo"
             />
           </div>
 
           <div class="form-field">
-            <label for="artistName">Nome Artista *</label>
+            <label for="artistName">Artist Name *</label>
             <InputText
               id="artistName"
               v-model="formData.artist.name"
@@ -234,13 +234,13 @@
               id="artistBio"
               v-model="formData.artist.bio"
               rows="3"
-              placeholder="Biografia dell'artista..."
+              placeholder="Artist biography..."
               class="w-full"
             />
           </div>
 
           <div class="form-field">
-            <label for="artistEmail">Email Artista</label>
+            <label for="artistEmail">Artist Email</label>
             <InputText
               id="artistEmail"
               v-model="formData.artist.email"
@@ -262,7 +262,7 @@
               placeholder="Ambient, Experimental, Drone"
               class="w-full"
             />
-            <small>Inserisci i generi separati da virgola</small>
+            <small>Enter genres separated by comma</small>
           </div>
 
           <div class="form-field">
@@ -371,50 +371,50 @@
 
           <div class="form-row">
             <div class="form-field">
-              <label for="requestStatus">Status Richiesta</label>
+              <label for="requestStatus">Request Status</label>
               <Dropdown
                 id="requestStatus"
                 v-model="formData.requestStatus"
                 :options="requestStatusOptions"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Seleziona status"
+                placeholder="Select status"
                 class="w-full"
               />
             </div>
 
             <div class="form-field">
-              <label for="status">Status Show</label>
+              <label for="status">Show Status</label>
               <Dropdown
                 id="status"
                 v-model="formData.status"
                 :options="statusOptions"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Seleziona status"
+                placeholder="Select status"
                 class="w-full"
               />
             </div>
           </div>
 
           <div class="form-field">
-            <label for="featured">In Evidenza</label>
+            <label for="featured">Featured</label>
             <div class="checkbox-field">
               <Checkbox
                 id="featured"
                 v-model="formData.featured"
                 :binary="true"
               />
-              <label for="featured">Mostra in homepage</label>
+              <label for="featured">Show on homepage</label>
             </div>
           </div>
         </div>
       </div>
 
       <template #footer>
-        <Button label="Annulla" severity="secondary" @click="dialogVisible = false" outlined />
+        <Button label="Cancel" severity="secondary" @click="dialogVisible = false" outlined />
         <Button
-          :label="editingShow ? 'Salva Modifiche' : 'Crea Show'"
+          :label="editingShow ? 'Save Changes' : 'Create Show'"
           @click="saveShow"
           :loading="showsStore.loading"
         />
@@ -466,7 +466,7 @@ const formData = ref({
     url: '',
     alt: ''
   },
-  genres: [],
+  genre: [],
   tags: [],
   requestStatus: 'pending',
   status: 'active',
@@ -476,15 +476,15 @@ const genresInput = ref('')
 const tagsInput = ref('')
 
 const requestStatusOptions = [
-  { label: 'In Attesa', value: 'pending' },
-  { label: 'Approvato', value: 'approved' },
-  { label: 'Rifiutato', value: 'rejected' }
+  { label: 'Pending', value: 'pending' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Rejected', value: 'rejected' }
 ]
 
 const statusOptions = [
-  { label: 'Attivo', value: 'active' },
-  { label: 'Inattivo', value: 'inactive' },
-  { label: 'Archiviato', value: 'archived' }
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Archived', value: 'archived' }
 ]
 
 // Computed per filtri
@@ -525,10 +525,10 @@ const filteredShows = computed(() => {
 
 const getFilterLabel = () => {
   const labels = {
-    pending: 'in attesa di approvazione',
-    active: 'attivo',
-    inactive: 'inattivo',
-    rejected: 'rifiutato',
+    pending: 'pending approval',
+    active: 'active',
+    inactive: 'inactive',
+    rejected: 'rejected',
     all: ''
   }
   return labels[currentFilter.value] || ''
@@ -536,9 +536,9 @@ const getFilterLabel = () => {
 
 const getRequestStatusLabel = (status) => {
   const map = {
-    pending: 'IN ATTESA',
-    approved: 'APPROVATO',
-    rejected: 'RIFIUTATO'
+    pending: 'PENDING',
+    approved: 'APPROVED',
+    rejected: 'REJECTED'
   }
   return map[status] || status?.toUpperCase()
 }
@@ -554,9 +554,9 @@ const getRequestStatusSeverity = (status) => {
 
 const getStatusLabel = (status) => {
   const map = {
-    active: 'ATTIVO',
-    inactive: 'INATTIVO',
-    archived: 'ARCHIVIATO'
+    active: 'ACTIVE',
+    inactive: 'INACTIVE',
+    archived: 'ARCHIVED'
   }
   return map[status] || status?.toUpperCase()
 }
@@ -587,12 +587,12 @@ const openDialog = (show = null) => {
         url: show.image?.url || '',
         alt: show.image?.alt || ''
       },
-      genres: show.genres || [],
+      genre: show.genres || [],
       tags: show.tags || [],
       requestStatus: show.requestStatus,
       status: show.status,
       featured: show.featured
-    }
+  }
     genresInput.value = (show.genres || []).join(', ')
     tagsInput.value = (show.tags || []).join(', ')
   } else {
@@ -608,12 +608,12 @@ const openDialog = (show = null) => {
         socialLinks: {}
       },
       image: { url: '', alt: '' },
-      genres: [],
+      genre: [],
       tags: [],
       requestStatus: 'pending',
       status: 'active',
       featured: false
-    }
+  }
     genresInput.value = ''
     tagsInput.value = ''
   }
@@ -645,12 +645,12 @@ const saveShow = async () => {
       url: formData.value.image.url || '',
       alt: formData.value.image.alt || ''
     },
-    genres: genresInput.value.split(',').map(g => g.trim()).filter(g => g),
+    genre: genresInput.value.split(',').map(g => g.trim()).filter(g => g),
     tags: tagsInput.value ? tagsInput.value.split(',').map(t => t.trim()).filter(t => t) : [],
     requestStatus: formData.value.requestStatus,
     status: formData.value.status,
     featured: formData.value.featured
-  }
+}
 
   try {
     if (editingShow.value) {
@@ -675,7 +675,7 @@ const saveShow = async () => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: showsStore.error || 'Errore durante il salvataggio',
       life: 3000
     })
@@ -689,20 +689,20 @@ const viewShow = (show) => {
 const approveRequest = async (show) => {
   confirm.require({
     message: `Vuoi approvare lo show "${show.title}" di ${show.artist.name}?`,
-    header: 'Approva Richiesta',
+    header: 'Approve Request',
     icon: 'pi pi-check-circle',
     acceptLabel: 'Sì, approva',
-    rejectLabel: 'Annulla',
+    rejectLabel: 'Cancel',
     acceptClass: 'p-button-success',
     accept: async () => {
       try {
         await api.put(`${API_URL}/shows/admin/${show._id}/approve`, {
-          adminNotes: 'Show approvato! Benvenuto su BUG Radio 🎵'
-        })
+          adminNote: 'Show approvato! Benvenuto su BUG Radio 🎵'
+      })
 
         toast.add({
           severity: 'success',
-          summary: 'Show Approvato!',
+          summary: 'Show Approved!',
           detail: `"${show.title}" è stato approvato e attivato`,
           life: 4000
         })
@@ -711,7 +711,7 @@ const approveRequest = async (show) => {
       } catch (error) {
         toast.add({
           severity: 'error',
-          summary: 'Errore',
+          summary: 'Error',
           detail: 'Errore nell\'approvazione',
           life: 3000
         })
@@ -727,12 +727,12 @@ const rejectRequest = async (show) => {
 
   try {
     await api.put(`${API_URL}/admin/shows/${show._id}/reject`, {
-      adminNotes: rejectReason
-    })
+      adminNote: rejectReason
+  })
 
     toast.add({
       severity: 'info',
-      summary: 'Show Rifiutato',
+      summary: 'Show Rejected',
       detail: `"${show.title}" è stato rifiutato`,
       life: 3000
     })
@@ -741,7 +741,7 @@ const rejectRequest = async (show) => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: 'Errore nel rifiuto',
       life: 3000
     })
@@ -751,10 +751,10 @@ const rejectRequest = async (show) => {
 const confirmDelete = (show) => {
   confirm.require({
     message: `Sei sicuro di voler eliminare "${show.title}"?`,
-    header: 'Conferma Eliminazione',
+    header: 'Confirm Deletion',
     icon: 'pi pi-exclamation-triangle',
     acceptLabel: 'Sì, elimina',
-    rejectLabel: 'Annulla',
+    rejectLabel: 'Cancel',
     acceptClass: 'p-button-danger',
     accept: () => deleteShow(show)
   })
@@ -772,7 +772,7 @@ const deleteShow = async (show) => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: 'Errore durante l\'eliminazione',
       life: 3000
     })
@@ -785,7 +785,7 @@ onMounted(async () => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: 'Errore nel caricamento degli show',
       life: 3000
     })

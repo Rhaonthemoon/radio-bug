@@ -55,7 +55,6 @@
       <div class="topbar">
         <div class="topbar-left">
           <h1>{{ pageTitle }}</h1>
-          <Breadcrumb v-if="breadcrumbItems.length > 0" :model="breadcrumbItems" />
         </div>
         <div class="topbar-right">
           <slot name="topbar-actions"></slot>
