@@ -103,11 +103,12 @@ img.logo {
 }
 
 .live-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  color: var(--color-coral);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 30px;
+    color: var(--color-coral);
 }
 
 .live-dot {

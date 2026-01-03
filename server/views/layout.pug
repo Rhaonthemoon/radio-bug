@@ -12,6 +12,7 @@ html(lang="en")
 
         //- CSS
         link(rel="stylesheet" href="/public/css/style.css")
+        link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css")
 
         //- Alpine.js
         script(defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js")
@@ -34,21 +35,22 @@ html(lang="en")
 
             //- Player
 
-            .container
+            .container(style="max-width: 361px;")
                 .player(x-data="{ playing: false, volume: 80 }")
-                    #visualizer.audio-visualizer
-
-                    .player-status
-                        .live-indicator#live-indicator
-                            span.live-dot
-                            span#live-text OFFLINE
-                        .track-info BUG Radio
-
                     .player-controls
                         audio#player-audio(x-ref="audio" src="https://bugradio2024.out.airtime.pro/bugradio2024_a" preload="none" crossorigin="anonymous")
                         button.btn-play(@click="playing ? $refs.audio.pause() : $refs.audio.play(); playing = !playing")
-                            span(x-show="!playing") ▶
-                            span(x-show="playing") ⏸
+                            i.fa-solid.fa-play(x-show="!playing")
+                            i.fa-solid.fa-pause(x-show="playing")
+                    #visualizer.audio-visualizer
+                    .player-status
+                        .live-indicator#live-indicator
+                            span#live-text OFF
+                            i.fa-regular.fa-circle-dot#live-icon
+
+
+
+
 
         //- Audio Visualizer
         script(src="/public/js/audio-visualizer.js")
@@ -68,13 +70,15 @@ html(lang="en")
                             audio.pause();
                             indicator.classList.remove('offline');
                             indicator.classList.add('on-air');
+                            icon.style.color = '#e53935';
                             text.textContent = 'ON AIR';
-                        })
-                        .catch(() => {
-                            indicator.classList.remove('on-air');
-                            indicator.classList.add('offline');
-                            text.textContent = 'OFFLINE';
-                        });
+                    })
+                    .catch(() => {
+                        indicator.classList.remove('on-air');
+                        indicator.classList.add('offline');
+                        icon.style.color = '#333';
+                        text.textContent = 'OFF';
+                    });
                 }
 
                 checkStream();

@@ -21,7 +21,7 @@ block content
         //- Player principale
         .episode-player(x-data="episodePlayer()")
             if episode.audioFile && episode.audioFile.exists
-                audio(x-ref="audio" src=`/uploads/episodes/${episode.audioFile.storedFilename}` preload="metadata")
+                audio#player-audio-episode(x-ref="audio" src="https://bugradio2024.out.airtime.pro/bugradio2024_a" preload="none" crossorigin="anonymous")
 
                 .player-main
                     button.btn-play-large(@click="togglePlay")
