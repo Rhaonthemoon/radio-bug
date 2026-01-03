@@ -1,0 +1,62 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title= title || 'BUG Radio'
+    
+    //- Fonts
+    link(rel="preconnect" href="https://fonts.googleapis.com")
+    link(rel="preconnect" href="https://fonts.gstatic.com" crossorigin)
+    link(href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet")
+    
+    //- CSS
+    link(rel="stylesheet" href="/public/css/style.css")
+    
+    //- Alpine.js
+    script(defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js")
+
+  body
+    header.site-header
+      .header-top
+        a.logo(href="/")
+          span.logo-text BUG RADIO
+        
+        nav.main-nav
+          a(href="/" class=currentPath === '/' ? 'active' : '') HOME
+          a(href="/about") ABOUT
+          a(href="/gallery") GALLERY
+          a(href="/shows") SHOWS
+          a(href="/schedule") SCHEDULE
+          a(href="/open-call") OPEN CALL
+          a(href="/education") EDUCATION
+          a(href="/partners") PARTNERS
+
+      //- Player
+      .player(x-data="{ playing: false, volume: 80 }")
+        .player-status
+          .live-indicator
+            span.live-dot
+            span LIVE
+          .track-info BUG Radio
+        
+        .player-controls
+          audio(x-ref="audio" src="https://stream.bugradio.it/live" preload="none")
+          button.btn-play(@click="playing ? $refs.audio.pause() : $refs.audio.play(); playing = !playing")
+            span(x-show="!playing") ▶
+            span(x-show="playing") ⏸
+
+    main
+      block content
+
+    footer.site-footer
+      .footer-top
+        .footer-section
+          h3 JOIN OUR COMMUNITY
+          a(href="/open-call") SUBMIT YOUR SHOW
+        .footer-section
+          h3 BUG RADIO IS SUPPORTED BY...
+          a(href="/partners") PARTNERS
+      
+      .footer-bottom
+        p © #{new Date().getFullYear()} BUG Radio
