@@ -14,13 +14,14 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
 // Inizializza Passport
 app.use(passport.initialize());
 
 // Serve file statici
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
-
+app.use('/public', express.static(path.join(__dirname, 'public')));
 // ==================== DATABASE CONNECTION ====================
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
@@ -36,6 +37,7 @@ const episodesRoutes = require('./routes/episodes.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const streamingRoutes = require('./routes/streaming.routes');
 const postsRoutes = require('./routes/posts.routes');
+const publicRoutes = require('./routes/public.routes');
 // ==================== TEST ROUTE ====================
 app.get('/api/admin/streaming/test-no-auth', (req, res) => {
   res.json({ test: 'works', timestamp: new Date() });
@@ -48,6 +50,7 @@ app.use('/api/episodes', episodesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin/streaming', streamingRoutes);
 app.use('/api/posts', postsRoutes);
+app.use('/', publicRoutes);
 // ==================== HEALTH CHECK ====================
 app.get('/api/health', (req, res) => {
   res.json({

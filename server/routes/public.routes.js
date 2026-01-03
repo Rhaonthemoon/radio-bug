@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Episode = require('../models/Episode');
-const Show = require('../models/Show');
+const Show = require('../models/Shows');
 
 // Middleware per passare il path corrente
 router.use((req, res, next) => {
