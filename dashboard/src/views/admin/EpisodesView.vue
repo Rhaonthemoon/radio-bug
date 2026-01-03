@@ -442,6 +442,7 @@
     </Dialog>
 
     <Toast />
+    <ConfirmDialog />
   </DashboardLayout>
 </template>
 

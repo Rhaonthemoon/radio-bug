@@ -1,0 +1,90 @@
+extends layout
+
+block content
+    section.show-detail
+        .show-hero
+            .show-cover
+                if show.image && show.image.url
+                    img(src=show.image.url alt=show.image.alt || show.title)
+                else
+                    .placeholder-image
+
+            .show-meta
+                h1.show-title= show.title
+
+                if show.artist
+                    .artist-info
+                        if show.artist.photo
+                            img.artist-photo(src=show.artist.photo alt=show.artist.name)
+                        .artist-details
+                            h3.artist-name= show.artist.name
+                            if show.artist.bio
+                                p.artist-bio= show.artist.bio
+
+                            if show.artist.socialLinks
+                                .social-links
+                                    if show.artist.socialLinks.instagram
+                                        a(href=show.artist.socialLinks.instagram target="_blank" rel="noopener") Instagram
+                                    if show.artist.socialLinks.soundcloud
+                                        a(href=show.artist.socialLinks.soundcloud target="_blank" rel="noopener") SoundCloud
+                                    if show.artist.socialLinks.mixcloud
+                                        a(href=show.artist.socialLinks.mixcloud target="_blank" rel="noopener") Mixcloud
+                                    if show.artist.socialLinks.bandcamp
+                                        a(href=show.artist.socialLinks.bandcamp target="_blank" rel="noopener") Bandcamp
+                                    if show.artist.socialLinks.website
+                                        a(href=show.artist.socialLinks.website target="_blank" rel="noopener") Website
+
+                if show.genres && show.genres.length
+                    .show-genres
+                        each genre in show.genres
+                            span.genre-tag= genre
+
+                if show.schedule && show.schedule.dayOfWeek
+                    .show-schedule
+                        span.schedule-label Schedule:
+                        span.schedule-info #{show.schedule.dayOfWeek} #{show.schedule.timeSlot} (#{show.schedule.frequency})
+
+        .show-description
+            if show.description
+                p= show.description
+
+        section.show-episodes-section
+            h2.section-title
+                span.title-box.yellow EPISODES
+
+            if episodes && episodes.length
+                ul.episodes-full-list
+                    each episode in episodes
+                        li.episode-item
+                            .episode-info
+                                h3.episode-title
+                                    a(href=`/episodes/${episode._id}`)= episode.title
+                                span.episode-date= new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                                if episode.description
+                                    p.episode-description= episode.description.substring(0, 200) + (episode.description.length > 200 ? '...' : '')
+
+                            .episode-actions
+                                if episode.audioFile && episode.audioFile.exists
+                                    button.btn-play-episode(
+                                        x-data="{ playing: false }"
+                                        @click=`
+                                              if (!window.episodeAudio) window.episodeAudio = new Audio();
+                                              if (playing) {
+                                                window.episodeAudio.pause();
+                                              } else {
+                                                window.episodeAudio.src = '/uploads/episodes/${episode.audioFile.storedFilename}';
+                                                window.episodeAudio.play();
+                                              }
+                                              playing = !playing;
+                    `
+                                    )
+                                        span(x-show="!playing") ▶
+                                        span(x-show="playing") ⏸
+
+                                if episode.externalLinks && episode.externalLinks.mixcloudUrl
+                                    a.external-link(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Mixcloud
+            else
+                p.no-episodes No episodes available for this show yet.
+
+        .back-link
+            a(href="/shows") ← Back to all shows
