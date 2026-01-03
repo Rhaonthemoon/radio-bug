@@ -4,7 +4,9 @@ block content
     section.hero
         .about-preview
             h2.section-title
-                span.title-box.yellow ABOUT
+                span.title-about AB
+                    br
+                    | OUT
             .about-content
                 p BUG Radio is on a mission to create a dynamic and interactive community radio in The Hague and it is striving to truly be a community radio, exploring the boundaries of radio as a medium for artistic expression and community connection.
                 a.read-more(href="/about") ▶ READ MORE
@@ -12,7 +14,7 @@ block content
     section.main-content
         .schedule-section
             h2.section-title
-                span.title-box.cyan SCHEDULE (CET)
+                span.title-schedule SCHEDULE (CET)
 
             .schedule-date #{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
 
@@ -31,7 +33,7 @@ block content
 
         .shows-section
             h2.section-title
-                span.title-box.coral SHOWS
+                span.title-shows SHOWS
 
             if shows && shows.length
                 ul.shows-list
@@ -45,7 +47,7 @@ block content
 
     section.latest-episodes
         h2.section-title
-            span.title-box.yellow LATEST EPISODES
+            span.title-highlight LATEST EPISODES
 
         if latestEpisodes && latestEpisodes.length
             ul.episodes-list

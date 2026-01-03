@@ -18,33 +18,68 @@ html(lang="en")
 
     body
         header.site-header
-            .header-top
-                a.logo(href="/")
-                    span.logo-text BUG RADIO
+            .container
+                .header-top
+                    img.logo(src="/public/assets/logo.jpeg")
 
-                nav.main-nav
-                    a(href="/" class=currentPath === '/' ? 'active' : '') HOME
-                    a(href="/about") ABOUT
-                    a(href="/gallery") GALLERY
-                    a(href="/shows") SHOWS
-                    a(href="/schedule") SCHEDULE
-                    a(href="/open-call") OPEN CALL
-                    a(href="/education") EDUCATION
-                    a(href="/partners") PARTNERS
+                    nav.main-nav
+                        a(href="/" class=currentPath === '/' ? 'active' : '') HOME
+                        a(href="/about") ABOUT
+                        a(href="/gallery") GALLERY
+                        a(href="/shows") SHOWS
+                        a(href="/schedule") SCHEDULE
+                        a(href="/open-call") OPEN CALL
+                        a(href="/education") EDUCATION
+                        a(href="/partners") PARTNERS
 
             //- Player
-            .player(x-data="{ playing: false, volume: 80 }")
-                .player-status
-                    .live-indicator
-                        span.live-dot
-                        span LIVE
-                    .track-info BUG Radio
 
-                .player-controls
-                    audio(x-ref="audio" src="https://stream.bugradio.it/live" preload="none")
-                    button.btn-play(@click="playing ? $refs.audio.pause() : $refs.audio.play(); playing = !playing")
-                        span(x-show="!playing") ▶
-                        span(x-show="playing") ⏸
+            .container
+                .player(x-data="{ playing: false, volume: 80 }")
+                    #visualizer.audio-visualizer
+
+                    .player-status
+                        .live-indicator#live-indicator
+                            span.live-dot
+                            span#live-text OFFLINE
+                        .track-info BUG Radio
+
+                    .player-controls
+                        audio#player-audio(x-ref="audio" src="https://bugradio2024.out.airtime.pro/bugradio2024_a" preload="none" crossorigin="anonymous")
+                        button.btn-play(@click="playing ? $refs.audio.pause() : $refs.audio.play(); playing = !playing")
+                            span(x-show="!playing") ▶
+                            span(x-show="playing") ⏸
+
+        //- Audio Visualizer
+        script(src="/public/js/audio-visualizer.js")
+
+        script.
+            (function() {
+                const indicator = document.getElementById('live-indicator');
+                const text = document.getElementById('live-text');
+                const audioSrc = 'https://bugradio2024.out.airtime.pro/bugradio2024_a';
+
+                function checkStream() {
+                    const audio = new Audio(audioSrc);
+                    audio.volume = 0;
+
+                    audio.play()
+                        .then(() => {
+                            audio.pause();
+                            indicator.classList.remove('offline');
+                            indicator.classList.add('on-air');
+                            text.textContent = 'ON AIR';
+                        })
+                        .catch(() => {
+                            indicator.classList.remove('on-air');
+                            indicator.classList.add('offline');
+                            text.textContent = 'OFFLINE';
+                        });
+                }
+
+                checkStream();
+                setInterval(checkStream, 30000);
+            })();
 
         main
             block content
