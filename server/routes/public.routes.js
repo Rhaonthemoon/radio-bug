@@ -12,12 +12,6 @@ router.use((req, res, next) => {
 // Homepage
 router.get('/', async (req, res) => {
     try {
-        // Fetch ultimi episodi pubblicati
-        const latestEpisodes = await Episode.find({ status: 'published' })
-            .populate('showId', 'title slug')
-            .sort({ airDate: -1 })
-            .limit(10);
-
         // Fetch shows approvati e attivi
         const shows = await Show.find({
             requestStatus: 'approved',
@@ -26,24 +20,58 @@ router.get('/', async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(8);
 
-        // Schedule: episodi di oggi
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        // Schedule: prossimi episodi (da oggi in poi, max 5 giorni)
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
 
-        const schedule = await Episode.find({
+        const maxDate = new Date(now);
+        maxDate.setDate(maxDate.getDate() + 5); // Prossimi 5 giorni
+
+        const upcomingEpisodes = await Episode.find({
             status: 'published',
-            airDate: { $gte: today, $lt: tomorrow }
+            airDate: { $gte: now, $lt: maxDate }
         })
             .populate('showId', 'title')
             .sort({ airDate: 1 });
 
+        // Raggruppa episodi per giorno
+        const scheduleByDay = [];
+        const groupedByDate = {};
+
+        upcomingEpisodes.forEach(episode => {
+            const airDate = new Date(episode.airDate);
+            const dateKey = airDate.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = [];
+            }
+
+            groupedByDate[dateKey].push({
+                time: airDate.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                title: episode.title,
+                showTitle: episode.showId?.title || null
+            });
+        });
+
+        // Converti in array ordinato
+        for (const date in groupedByDate) {
+            scheduleByDay.push({
+                date: date,
+                episodes: groupedByDate[date]
+            });
+        }
+
         res.render('home', {
             title: 'BUG Radio',
-            latestEpisodes,
             shows,
-            schedule
+            scheduleByDay
         });
     } catch (err) {
         console.error('Homepage error:', err);
@@ -149,5 +177,128 @@ router.get('/episodes/:id', async (req, res) => {
         res.status(500).send('Errore server');
     }
 });
+
+// Schedule completo con calendario
+router.get('/schedule', async (req, res) => {
+    try {
+        // Parametri per mese/anno (default: mese corrente)
+        const now = new Date();
+        const month = parseInt(req.query.month) || (now.getMonth() + 1);
+        const year = parseInt(req.query.year) || now.getFullYear();
+
+        // Calcola primo e ultimo giorno del mese
+        const firstDayOfMonth = new Date(year, month - 1, 1);
+        const lastDayOfMonth = new Date(year, month, 0, 23, 59, 59);
+
+        // Fetch tutti gli episodi del mese
+        const monthEpisodes = await Episode.find({
+            status: 'published',
+            airDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
+        })
+            .populate('showId', 'title slug')
+            .sort({ airDate: 1 });
+
+        // Raggruppa episodi per giorno
+        const scheduleByDay = [];
+        const groupedByDate = {};
+
+        monthEpisodes.forEach(episode => {
+            const airDate = new Date(episode.airDate);
+            const dateKey = airDate.toISOString().split('T')[0]; // YYYY-MM-DD per ordinamento
+            const displayDate = airDate.toLocaleDateString('en-GB', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            if (!groupedByDate[dateKey]) {
+                groupedByDate[dateKey] = {
+                    dateKey: dateKey,
+                    displayDate: displayDate,
+                    dayNumber: airDate.getDate(),
+                    episodes: []
+                };
+            }
+
+            groupedByDate[dateKey].episodes.push({
+                id: episode._id,
+                time: airDate.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }),
+                title: episode.title,
+                showTitle: episode.showId?.title || null,
+                showSlug: episode.showId?.slug || null,
+                description: episode.description || null
+            });
+        });
+
+        // Converti in array ordinato per data
+        for (const dateKey in groupedByDate) {
+            scheduleByDay.push(groupedByDate[dateKey]);
+        }
+        scheduleByDay.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+
+        // Genera dati per il calendario
+        const calendarDays = generateCalendarDays(year, month, groupedByDate);
+
+        // Mese precedente e successivo per navigazione
+        const prevMonth = month === 1 ? 12 : month - 1;
+        const prevYear = month === 1 ? year - 1 : year;
+        const nextMonth = month === 12 ? 1 : month + 1;
+        const nextYear = month === 12 ? year + 1 : year;
+
+        const monthName = firstDayOfMonth.toLocaleDateString('en-GB', { month: 'long' });
+
+        res.render('schedule', {
+            title: 'Schedule - BUG Radio',
+            scheduleByDay,
+            calendarDays,
+            currentMonth: month,
+            currentYear: year,
+            monthName,
+            prevMonth,
+            prevYear,
+            nextMonth,
+            nextYear,
+            today: now.toISOString().split('T')[0]
+        });
+    } catch (err) {
+        console.error('Schedule error:', err);
+        res.status(500).send('Errore server');
+    }
+});
+
+// Helper: genera giorni del calendario
+function generateCalendarDays(year, month, groupedByDate) {
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+    const calendarDays = [];
+
+    // Giorni vuoti prima del primo del mese (per allineamento)
+    for (let i = 0; i < startingDayOfWeek; i++) {
+        calendarDays.push({ empty: true });
+    }
+
+    // Giorni del mese
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const hasEpisodes = groupedByDate[dateKey] && groupedByDate[dateKey].episodes.length > 0;
+        const episodeCount = hasEpisodes ? groupedByDate[dateKey].episodes.length : 0;
+
+        calendarDays.push({
+            day: day,
+            dateKey: dateKey,
+            hasEpisodes: hasEpisodes,
+            episodeCount: episodeCount
+        });
+    }
+
+    return calendarDays;
+}
 
 module.exports = router;

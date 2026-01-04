@@ -275,6 +275,49 @@
             />
           </div>
         </div>
+
+        <!-- Schedule Section -->
+        <div class="form-section">
+          <h3><i class="pi pi-calendar"></i> Schedule</h3>
+          <p class="section-description">Set the preferred day and time slot for this show</p>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="dayOfWeek">Preferred Day</label>
+              <Dropdown
+                id="dayOfWeek"
+                v-model="formData.schedule.dayOfWeek"
+                :options="dayOptions"
+                placeholder="Select day"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="timeSlot">Time Slot</label>
+              <InputText
+                id="timeSlot"
+                v-model="formData.schedule.timeSlot"
+                placeholder="E.g. 20:00 - 22:00"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="frequency">Frequency</label>
+            <Dropdown
+              id="frequency"
+              v-model="formData.schedule.frequency"
+              :options="frequencyOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select frequency"
+              class="w-full"
+            />
+          </div>
+        </div>
+
         <!-- Social Links Section -->
         <div class="form-section">
           <h3>Social Links</h3>
@@ -366,6 +409,7 @@
             </div>
           </div>
         </div>
+
         <div class="form-section">
           <h3>Impostazioni</h3>
 
@@ -457,14 +501,19 @@ const formData = ref({
       instagram: '',
       soundcloud: '',
       mixcloud: '',
-      youtube: '',      // ← AGGIUNGI
-      bandcamp: '',     // ← AGGIUNGI
-      website: ''       // ← AGGIUNGI
+      youtube: '',
+      bandcamp: '',
+      website: ''
     }
   },
   image: {
     url: '',
     alt: ''
+  },
+  schedule: {
+    dayOfWeek: '',
+    timeSlot: '',
+    frequency: 'weekly'
   },
   genre: [],
   tags: [],
@@ -472,8 +521,26 @@ const formData = ref({
   status: 'active',
   featured: false
 })
+
 const genresInput = ref('')
 const tagsInput = ref('')
+
+const dayOptions = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
+]
+
+const frequencyOptions = [
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Bi-weekly', value: 'biweekly' },
+  { label: 'Monthly', value: 'monthly' },
+  { label: 'One-time', value: 'onetime' }
+]
 
 const requestStatusOptions = [
   { label: 'Pending', value: 'pending' },
@@ -587,12 +654,17 @@ const openDialog = (show = null) => {
         url: show.image?.url || '',
         alt: show.image?.alt || ''
       },
+      schedule: {
+        dayOfWeek: show.schedule?.dayOfWeek || '',
+        timeSlot: show.schedule?.timeSlot || '',
+        frequency: show.schedule?.frequency || 'weekly'
+      },
       genre: show.genres || [],
       tags: show.tags || [],
       requestStatus: show.requestStatus,
       status: show.status,
       featured: show.featured
-  }
+    }
     genresInput.value = (show.genres || []).join(', ')
     tagsInput.value = (show.tags || []).join(', ')
   } else {
@@ -608,12 +680,17 @@ const openDialog = (show = null) => {
         socialLinks: {}
       },
       image: { url: '', alt: '' },
+      schedule: {
+        dayOfWeek: '',
+        timeSlot: '',
+        frequency: 'weekly'
+      },
       genre: [],
       tags: [],
       requestStatus: 'pending',
       status: 'active',
       featured: false
-  }
+    }
     genresInput.value = ''
     tagsInput.value = ''
   }
@@ -645,12 +722,17 @@ const saveShow = async () => {
       url: formData.value.image.url || '',
       alt: formData.value.image.alt || ''
     },
+    schedule: {
+      dayOfWeek: formData.value.schedule.dayOfWeek || '',
+      timeSlot: formData.value.schedule.timeSlot || '',
+      frequency: formData.value.schedule.frequency || 'weekly'
+    },
     genre: genresInput.value.split(',').map(g => g.trim()).filter(g => g),
     tags: tagsInput.value ? tagsInput.value.split(',').map(t => t.trim()).filter(t => t) : [],
     requestStatus: formData.value.requestStatus,
     status: formData.value.status,
     featured: formData.value.featured
-}
+  }
 
   try {
     if (editingShow.value) {
@@ -698,7 +780,7 @@ const approveRequest = async (show) => {
       try {
         await api.put(`${API_URL}/shows/admin/${show._id}/approve`, {
           adminNote: 'Show approvato! Benvenuto su BUG Radio 🎵'
-      })
+        })
 
         toast.add({
           severity: 'success',
@@ -728,7 +810,7 @@ const rejectRequest = async (show) => {
   try {
     await api.put(`${API_URL}/admin/shows/${show._id}/reject`, {
       adminNote: rejectReason
-  })
+    })
 
     toast.add({
       severity: 'info',
@@ -836,34 +918,7 @@ onMounted(async () => {
   color: #6b7280;
   font-size: 0.875rem;
 }
-.form-section {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #e5e7eb;
-}
 
-.form-section h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.section-description {
-  margin: 0 0 1.5rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.social-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.form-field label i {
-  margin-right: 0.5rem;
-}
 .dialog-content {
   padding: 1rem 0;
 }
@@ -880,9 +935,19 @@ onMounted(async () => {
 }
 
 .form-section h3 {
-  margin: 0 0 1rem;
-  color: #1f2937;
+  margin: 0 0 0.5rem;
   font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-description {
+  margin: 0 0 1.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 
 .form-field {
@@ -896,6 +961,10 @@ onMounted(async () => {
   color: #374151;
 }
 
+.form-field label i {
+  margin-right: 0.5rem;
+}
+
 .form-field small {
   display: block;
   margin-top: 0.4rem;
@@ -907,6 +976,12 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.social-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
 }
 
 .checkbox-field {

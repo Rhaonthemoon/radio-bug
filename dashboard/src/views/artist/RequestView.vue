@@ -19,31 +19,31 @@
               <div class="form-field">
                 <label for="title">Show Title *</label>
                 <InputText
-                    id="title"
-                    v-model="formData.title"
-                    placeholder="E.g. Noise à Noise"
-                    required
-                    class="w-full"
+                  id="title"
+                  v-model="formData.title"
+                  placeholder="E.g. Noise à Noise"
+                  required
+                  class="w-full"
                 />
               </div>
 
               <div class="form-field">
                 <label for="description">Show Description *</label>
                 <Textarea
-                    id="description"
-                    v-model="formData.description"
-                    rows="6"
-                    placeholder="Describe your show concept, the type of music you'll feature, the atmosphere you want to create..."
-                    required
-                    class="w-full"
+                  id="description"
+                  v-model="formData.description"
+                  rows="6"
+                  placeholder="Describe your show concept, the type of music you'll feature, the atmosphere you want to create..."
+                  required
+                  class="w-full"
                 />
                 <small>Explain in detail what makes your show unique</small>
               </div>
 
               <div class="form-field">
                 <ImageUpload
-                    label="Show Cover Image *"
-                    v-model="formData.image.url"
+                  label="Show Cover Image *"
+                  v-model="formData.image.url"
                 />
               </div>
             </div>
@@ -54,8 +54,8 @@
 
               <div class="form-field">
                 <ImageUpload
-                    label="Artist Photo"
-                    v-model="formData.artist.photo"
+                  label="Artist Photo"
+                  v-model="formData.artist.photo"
                 />
                 <small>Profile photo or press photo (optional)</small>
               </div>
@@ -63,72 +63,129 @@
               <div class="form-field">
                 <label for="artistName">Artist/Curator Name *</label>
                 <InputText
-                    id="artistName"
-                    v-model="formData.artist.name"
-                    placeholder="Your name or pseudonym"
-                    required
-                    class="w-full"
+                  id="artistName"
+                  v-model="formData.artist.name"
+                  placeholder="Your name or pseudonym"
+                  required
+                  class="w-full"
                 />
               </div>
 
               <div class="form-field">
                 <label for="artistBio">Artist Biography *</label>
                 <Textarea
-                    id="artistBio"
-                    v-model="formData.artist.bio"
-                    rows="5"
-                    placeholder="Tell us about your musical experience, collaborations, past projects..."
-                    required
-                    class="w-full"
+                  id="artistBio"
+                  v-model="formData.artist.bio"
+                  rows="5"
+                  placeholder="Tell us about your musical experience, collaborations, past projects..."
+                  required
+                  class="w-full"
                 />
               </div>
 
               <div class="form-field">
                 <label for="artistEmail">Contact Email *</label>
                 <InputText
-                    id="artistEmail"
-                    v-model="formData.artist.email"
-                    type="email"
-                    placeholder="your@email.com"
-                    required
-                    class="w-full"
+                  id="artistEmail"
+                  v-model="formData.artist.email"
+                  type="email"
+                  placeholder="your@email.com"
+                  required
+                  class="w-full"
                 />
               </div>
 
               <div class="form-field">
                 <label>Social Links (optional)</label>
-                <div class="social-inputs">
-                  <InputText
+                <div class="social-grid">
+                  <div class="social-input">
+                    <label for="instagram">
+                      <i class="pi pi-instagram" style="color: #E4405F;"></i>
+                      Instagram
+                    </label>
+                    <InputText
+                      id="instagram"
                       v-model="formData.artist.socialLinks.instagram"
-                      placeholder="Instagram URL"
+                      placeholder="https://instagram.com/username"
                       class="w-full"
-                  />
-                  <InputText
+                    />
+                  </div>
+                  <div class="social-input">
+                    <label for="soundcloud">
+                      <i class="pi pi-cloud" style="color: #FF5500;"></i>
+                      SoundCloud
+                    </label>
+                    <InputText
+                      id="soundcloud"
                       v-model="formData.artist.socialLinks.soundcloud"
-                      placeholder="Soundcloud URL"
+                      placeholder="https://soundcloud.com/username"
                       class="w-full"
-                  />
-                  <InputText
+                    />
+                  </div>
+                  <div class="social-input">
+                    <label for="mixcloud">
+                      <i class="pi pi-volume-up" style="color: #314359;"></i>
+                      Mixcloud
+                    </label>
+                    <InputText
+                      id="mixcloud"
                       v-model="formData.artist.socialLinks.mixcloud"
-                      placeholder="Mixcloud URL"
+                      placeholder="https://mixcloud.com/username"
                       class="w-full"
-                  />
+                    />
+                  </div>
+                  <div class="social-input">
+                    <label for="youtube">
+                      <i class="pi pi-youtube" style="color: #FF0000;"></i>
+                      YouTube
+                    </label>
+                    <InputText
+                      id="youtube"
+                      v-model="formData.artist.socialLinks.youtube"
+                      placeholder="https://youtube.com/@username"
+                      class="w-full"
+                    />
+                  </div>
+                  <div class="social-input">
+                    <label for="bandcamp">
+                      <i class="pi pi-ticket" style="color: #629AA9;"></i>
+                      Bandcamp
+                    </label>
+                    <InputText
+                      id="bandcamp"
+                      v-model="formData.artist.socialLinks.bandcamp"
+                      placeholder="https://username.bandcamp.com"
+                      class="w-full"
+                    />
+                  </div>
+                  <div class="social-input">
+                    <label for="website">
+                      <i class="pi pi-globe" style="color: #3B82F6;"></i>
+                      Personal Website
+                    </label>
+                    <InputText
+                      id="website"
+                      v-model="formData.artist.socialLinks.website"
+                      placeholder="https://yourwebsite.com"
+                      class="w-full"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Genres and Schedule -->
+            <!-- Genres -->
             <div class="form-section">
-              <h3><i class="pi pi-tags"></i> Musical Genres and Programming</h3>
+              <h3><i class="pi pi-tags"></i> Musical Genres</h3>
 
               <div class="form-field">
                 <label for="genres">Musical Genres *</label>
                 <InputText
-                    id="genres"
-                    v-model="genresInput"
-                    placeholder="Ambient, Experimental, Drone, Techno..."
-                    required
-                    class="w-full"
+                  id="genres"
+                  v-model="genresInput"
+                  placeholder="Ambient, Experimental, Drone, Techno..."
+                  required
+                  class="w-full"
                 />
                 <small>Enter genres separated by commas (at least one)</small>
               </div>
@@ -136,54 +193,29 @@
               <div class="form-field">
                 <label for="tags">Tags</label>
                 <InputText
-                    id="tags"
-                    v-model="tagsInput"
-                    placeholder="underground, live, dj-set..."
-                    class="w-full"
+                  id="tags"
+                  v-model="tagsInput"
+                  placeholder="underground, live, dj-set..."
+                  class="w-full"
                 />
                 <small>Keywords to describe your show (optional)</small>
-              </div>
-
-              <div class="form-row">
-                <div class="form-field">
-                  <label for="dayOfWeek">Preferred Day *</label>
-                  <Dropdown
-                      id="dayOfWeek"
-                      v-model="formData.schedule.dayOfWeek"
-                      :options="dayOptions"
-                      placeholder="Select day"
-                      required
-                      class="w-full"
-                  />
-                </div>
-
-                <div class="form-field">
-                  <label for="timeSlot">Time Slot *</label>
-                  <InputText
-                      id="timeSlot"
-                      v-model="formData.schedule.timeSlot"
-                      placeholder="E.g. 20:00 - 22:00"
-                      required
-                      class="w-full"
-                  />
-                </div>
               </div>
             </div>
 
             <!-- Actions -->
             <div class="form-actions">
               <Button
-                  type="button"
-                  label="Cancel"
-                  severity="secondary"
-                  outlined
-                  @click="$router.push('/artist/dashboard')"
+                type="button"
+                label="Cancel"
+                severity="secondary"
+                outlined
+                @click="$router.push('/artist/dashboard')"
               />
               <Button
-                  type="submit"
-                  label="Submit Request"
-                  icon="pi pi-send"
-                  :loading="loading"
+                type="submit"
+                label="Submit Request"
+                icon="pi pi-send"
+                :loading="loading"
               />
             </div>
           </form>
@@ -218,32 +250,20 @@ const formData = ref({
     socialLinks: {
       instagram: '',
       soundcloud: '',
-      mixcloud: ''
+      mixcloud: '',
+      youtube: '',
+      bandcamp: '',
+      website: ''
     }
   },
   image: {
     url: '',
     alt: ''
-  },
-  schedule: {
-    dayOfWeek: '',
-    timeSlot: '',
-    frequency: 'weekly'
   }
 })
 
 const genresInput = ref('')
 const tagsInput = ref('')
-
-const dayOptions = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday'
-]
 
 const validateForm = () => {
   if (!formData.value.title || !formData.value.description) {
@@ -281,16 +301,6 @@ const validateForm = () => {
       severity: 'warn',
       summary: 'Missing Genres',
       detail: 'Enter at least one musical genre',
-      life: 3000
-    })
-    return false
-  }
-
-  if (!formData.value.schedule.dayOfWeek || !formData.value.schedule.timeSlot) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Missing Schedule',
-      detail: 'Select preferred day and time slot',
       life: 3000
     })
     return false
@@ -413,16 +423,25 @@ const submitRequest = async () => {
   font-size: 0.85rem;
 }
 
-.form-row {
+.social-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 }
 
-.social-inputs {
+.social-input {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+}
+
+.social-input label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
 }
 
 .form-actions {
@@ -436,11 +455,5 @@ const submitRequest = async () => {
 
 .w-full {
   width: 100%;
-}
-
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

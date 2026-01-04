@@ -1,0 +1,71 @@
+extends layout
+
+block content
+    section.schedule-page
+        h1.page-title
+            span.title-schedule SCHEDULE (CET)
+
+        .schedule-container
+            //- Calendario
+            .calendar-section
+                .calendar-header
+                    a.calendar-nav(href=`/schedule?month=${prevMonth}&year=${prevYear}`)
+                        | ◀
+                    h2.calendar-month= `${monthName} ${currentYear}`
+                    a.calendar-nav(href=`/schedule?month=${nextMonth}&year=${nextYear}`)
+                        | ▶
+
+                .calendar-grid
+                    //- Header giorni della settimana
+                    .calendar-weekdays
+                        span Sun
+                        span Mon
+                        span Tue
+                        span Wed
+                        span Thu
+                        span Fri
+                        span Sat
+
+                    //- Giorni del mese
+                    .calendar-days
+                        each dayInfo in calendarDays
+                            if dayInfo.empty
+                                .calendar-day.empty
+                            else
+                                a.calendar-day(
+                                    href=dayInfo.hasEpisodes ? `#day-${dayInfo.dateKey}` : null
+                                    class={
+                                        'has-episodes': dayInfo.hasEpisodes,
+                                        'today': dayInfo.dateKey === today
+                                    }
+                                )
+                                    span.day-number= dayInfo.day
+                                    if dayInfo.hasEpisodes
+                                        span.episode-dot= dayInfo.episodeCount
+
+            //- Lista episodi per giorno
+            .schedule-list-section
+                if scheduleByDay && scheduleByDay.length
+                    each dayGroup in scheduleByDay
+                        .schedule-day-block(id=`day-${dayGroup.dateKey}`)
+                            h3.schedule-date= dayGroup.displayDate
+                            ul.schedule-list
+                                each episode in dayGroup.episodes
+                                    li.schedule-item
+                                        span.time= episode.time
+                                        .schedule-item-content
+                                            if episode.showSlug
+                                                a.episode-title(href=`/shows/${episode.showSlug}`)= episode.title
+                                            else
+                                                span.episode-title= episode.title
+                                            if episode.showTitle
+                                                span.show-name= episode.showTitle
+                                            if episode.description
+                                                p.episode-description= episode.description.substring(0, 150) + (episode.description.length > 150 ? '...' : '')
+                else
+                    .no-schedule
+                        p No programs scheduled for #{monthName} #{currentYear}
+
+        //- Link per tornare alla home
+        .back-link
+            a(href="/") ◀ Back to Home

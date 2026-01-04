@@ -16,18 +16,19 @@ block content
             h2.section-title
                 span.title-schedule SCHEDULE (CET)
 
-            .schedule-date #{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-
-            if schedule && schedule.length
-                ul.schedule-list
-                    each item in schedule
-                        li.schedule-item
-                            span.time= new Date(item.airDate).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-                            span.show-name= item.title
-                            if item.showId
-                                span.show-ref  — #{item.showId.title}
+            if scheduleByDay && scheduleByDay.length
+                each dayGroup in scheduleByDay
+                    .schedule-day-block
+                        .schedule-date= dayGroup.date
+                        ul.schedule-list
+                            each episode in dayGroup.episodes
+                                li.schedule-item
+                                    span.time= episode.time
+                                    |  #{episode.title}
+                                    if episode.showTitle
+                                        |  - #{episode.showTitle}
             else
-                p.no-schedule No programs scheduled for today
+                p.no-schedule No upcoming programs scheduled
 
             a.read-more(href="/schedule") ▶ READ MORE
 
@@ -44,46 +45,3 @@ block content
                 p.no-shows No shows available yet
 
             a.read-more(href="/shows") ▶ READ MORE
-
-    section.latest-episodes
-        h2.section-title
-            span.title-highlight LATEST EPISODES
-
-        if latestEpisodes && latestEpisodes.length
-            ul.episodes-list
-                each episode in latestEpisodes
-                    li.episode-item
-                        .episode-info
-                            h3.episode-title= episode.title
-                            if episode.showId
-                                span.episode-show= episode.showId.title
-                            span.episode-date= new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-                            if episode.description
-                                p.episode-description= episode.description.substring(0, 120) + (episode.description.length > 120 ? '...' : '')
-
-                        .episode-actions
-                            if episode.audioFile && episode.audioFile.exists
-                                button.btn-play-episode(
-                                    x-data="{ playing: false }"
-                                    @click=`
-                    if (!window.episodeAudio) window.episodeAudio = new Audio();
-                    if (playing) {
-                      window.episodeAudio.pause();
-                    } else {
-                      window.episodeAudio.src = '/uploads/episodes/${episode.audioFile.storedFilename}';
-                      window.episodeAudio.play();
-                    }
-                    playing = !playing;
-                  `
-                                )
-                                    span(x-show="!playing") ▶
-                                    span(x-show="playing") ⏸
-                                if episode.duration
-                                    span.episode-duration= Math.floor(episode.duration / 60) + ' min'
-
-                            if episode.externalLinks && episode.externalLinks.mixcloudUrl
-                                a.external-link(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Mixcloud
-                            if episode.externalLinks && episode.externalLinks.spotifyUrl
-                                a.external-link(href=episode.externalLinks.spotifyUrl target="_blank" rel="noopener") Spotify
-        else
-            p.no-episodes No episodes available yet

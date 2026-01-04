@@ -86,9 +86,18 @@
             </template>
           </Column>
 
-          <Column field="airDate" header="Air Date" sortable>
+          <Column field="schedule" header="Schedule" sortable>
             <template #body="{ data }">
-              {{ formatDate(data.airDate) }}
+              <div class="schedule-cell">
+                <div v-if="data.showId?.schedule?.dayOfWeek" class="schedule-day">
+                  <Tag :value="data.showId.schedule.dayOfWeek" severity="info" />
+                  <small v-if="data.showId.schedule.timeSlot">{{ data.showId.schedule.timeSlot }}</small>
+                </div>
+                <div class="schedule-airdate">
+                  <i class="pi pi-calendar"></i>
+                  <span>{{ formatDateTime(data.airDate) }}</span>
+                </div>
+              </div>
             </template>
           </Column>
 
@@ -103,23 +112,6 @@
               <Tag
                 :value="getStatusLabel(data.status)"
                 :severity="getStatusSeverity(data.status)"
-              />
-            </template>
-          </Column>
-
-          <Column header="Audio" style="width: 100px;">
-            <template #body="{ data }">
-              <Tag
-                v-if="data.localFile?.exists"
-                value="Uploaded"
-                severity="success"
-                icon="pi pi-check"
-              />
-              <Tag
-                v-else
-                value="No File"
-                severity="warning"
-                icon="pi pi-times"
               />
             </template>
           </Column>
@@ -199,9 +191,40 @@
             placeholder="Select a show"
             :class="{ 'p-invalid': formErrors.showId }"
             class="w-full"
+            @change="onShowSelect"
           />
           <small class="p-error" v-if="formErrors.showId">{{ formErrors.showId }}</small>
         </div>
+
+        <!-- Show Schedule Info (read-only, from selected show) -->
+        <div v-if="selectedShowSchedule" class="schedule-info-box">
+          <div class="schedule-header">
+            <i class="pi pi-calendar"></i>
+            <span>Show Schedule</span>
+          </div>
+          <div class="schedule-details">
+            <div class="schedule-item">
+              <strong>Day:</strong>
+              <Tag :value="selectedShowSchedule.dayOfWeek" severity="info" />
+            </div>
+            <div class="schedule-item" v-if="selectedShowSchedule.timeSlot">
+              <strong>Time:</strong>
+              <span>{{ selectedShowSchedule.timeSlot }}</span>
+            </div>
+            <div class="schedule-item" v-if="selectedShowSchedule.frequency">
+              <strong>Frequency:</strong>
+              <Tag :value="formatFrequency(selectedShowSchedule.frequency)" severity="secondary" />
+            </div>
+          </div>
+          <small class="schedule-hint">
+            <i class="pi pi-info-circle"></i>
+            Schedule is inherited from the show settings
+          </small>
+        </div>
+
+        <Message v-else-if="episodeForm.showId && !selectedShowSchedule" severity="warn" :closable="false">
+          <small>This show doesn't have a schedule configured yet. You can set it in Show Management.</small>
+        </Message>
 
         <!-- Title -->
         <div class="form-group">
@@ -228,18 +251,30 @@
           />
         </div>
 
-        <!-- Air Date -->
+        <!-- Air Date & Time -->
         <div class="form-group">
-          <label for="airDate">Air Date *</label>
+          <label for="airDate">Air Date & Time *</label>
           <Calendar
             id="airDate"
             v-model="episodeForm.airDate"
             dateFormat="yy-mm-dd"
             showIcon
+            showTime
+            hourFormat="24"
             :class="{ 'p-invalid': formErrors.airDate }"
             class="w-full"
           />
           <small class="p-error" v-if="formErrors.airDate">{{ formErrors.airDate }}</small>
+          <small v-if="suggestedAirDate" class="hint suggested-date">
+            <i class="pi pi-lightbulb"></i>
+            Suggested: <strong>{{ formatDateTime(suggestedAirDate) }}</strong>
+            <Button
+              label="Use"
+              size="small"
+              text
+              @click="episodeForm.airDate = suggestedAirDate"
+            />
+          </small>
         </div>
 
         <!-- Duration -->
@@ -402,6 +437,14 @@
           {{ previewEpisode.showId?.title }}
         </p>
 
+        <!-- Show schedule in preview -->
+        <div v-if="previewEpisode.showId?.schedule?.dayOfWeek" class="preview-schedule">
+          <Tag :value="previewEpisode.showId.schedule.dayOfWeek" severity="info" />
+          <span v-if="previewEpisode.showId.schedule.timeSlot">
+            {{ previewEpisode.showId.schedule.timeSlot }}
+          </span>
+        </div>
+
         <div class="audio-player" v-if="previewEpisode.audioFile?.exists">
           <audio
             ref="audioPlayer"
@@ -447,7 +490,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import DashboardLayout from '../../components/DashboardLayout.vue'
@@ -506,6 +549,60 @@ const statusOptions = [
   { label: 'Archived', value: 'archived' }
 ]
 
+// Computed - Get schedule from selected show
+const selectedShowSchedule = computed(() => {
+  if (!episodeForm.value.showId) return null
+  const show = shows.value.find(s => s._id === episodeForm.value.showId)
+  if (!show?.schedule?.dayOfWeek) return null
+  return show.schedule
+})
+
+// Computed - Suggest next air date based on show schedule (includes time)
+const suggestedAirDate = computed(() => {
+  if (!selectedShowSchedule.value?.dayOfWeek) return null
+
+  const dayMap = {
+    'Sunday': 0,
+    'Monday': 1,
+    'Tuesday': 2,
+    'Wednesday': 3,
+    'Thursday': 4,
+    'Friday': 5,
+    'Saturday': 6
+  }
+
+  const targetDay = dayMap[selectedShowSchedule.value.dayOfWeek]
+  if (targetDay === undefined) return null
+
+  const today = new Date()
+  const currentDay = today.getDay()
+  let daysUntilTarget = targetDay - currentDay
+
+  if (daysUntilTarget <= 0) {
+    daysUntilTarget += 7
+  }
+
+  const nextDate = new Date(today)
+  nextDate.setDate(today.getDate() + daysUntilTarget)
+
+  // Parse time from timeSlot (e.g., "20:00 - 22:00" or "20:00")
+  const timeSlot = selectedShowSchedule.value.timeSlot
+  if (timeSlot) {
+    const timeMatch = timeSlot.match(/(\d{1,2}):(\d{2})/)
+    if (timeMatch) {
+      const hours = parseInt(timeMatch[1], 10)
+      const minutes = parseInt(timeMatch[2], 10)
+      nextDate.setHours(hours, minutes, 0, 0)
+    } else {
+      nextDate.setHours(0, 0, 0, 0)
+    }
+  } else {
+    nextDate.setHours(0, 0, 0, 0)
+  }
+
+  return nextDate
+})
+
 // Computed
 const filteredEpisodes = computed(() => {
   let result = episodes.value
@@ -552,6 +649,21 @@ const loadShows = async () => {
   } catch (error) {
     console.error('Error loading shows:', error)
   }
+}
+
+const onShowSelect = () => {
+  // When show changes, the computed will auto-update selectedShowSchedule
+  // We could also auto-set the air date here if desired
+}
+
+const formatFrequency = (frequency) => {
+  const map = {
+    'weekly': 'Weekly',
+    'biweekly': 'Bi-weekly',
+    'monthly': 'Monthly',
+    'onetime': 'One-time'
+  }
+  return map[frequency] || frequency
 }
 
 const openCreateDialog = () => {
@@ -700,54 +812,39 @@ const openUploadDialog = (episode) => {
   selectedFile.value = null
   uploadProgress.value = 0
   uploadDialog.value = true
-
-  // Reset input file
-  if (fileInput.value) {
-    fileInput.value.value = ''
-  }
 }
 
 const triggerFileInput = () => {
-  if (fileInput.value) {
-    fileInput.value.click()
-  }
+  fileInput.value?.click()
 }
 
 const onFileSelectNative = (event) => {
   const file = event.target.files[0]
+  if (file) {
+    // Verifica il tipo
+    if (!file.type.includes('audio/') && !file.name.endsWith('.mp3')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Invalid File',
+        detail: 'Please select an MP3 file',
+        life: 3000
+      })
+      return
+    }
 
-  if (!file) return
+    // Verifica la dimensione (500MB max)
+    if (file.size > 500 * 1024 * 1024) {
+      toast.add({
+        severity: 'error',
+        summary: 'File Too Large',
+        detail: 'Maximum file size is 500MB',
+        life: 3000
+      })
+      return
+    }
 
-  // Verifica MP3
-  const isMP3 = file.type === 'audio/mpeg' ||
-    file.type === 'audio/mp3' ||
-    file.name.toLowerCase().endsWith('.mp3')
-
-  if (!isMP3) {
-    toast.add({
-      severity: 'error',
-      summary: 'Invalid Format',
-      detail: 'Please select an MP3 file',
-      life: 3000
-    })
-    if (fileInput.value) fileInput.value.value = ''
-    return
+    selectedFile.value = file
   }
-
-  // Verifica dimensione (500MB)
-  if (file.size > 500 * 1024 * 1024) {
-    toast.add({
-      severity: 'error',
-      summary: 'File Too Large',
-      detail: 'Maximum size is 500MB',
-      life: 3000
-    })
-    if (fileInput.value) fileInput.value.value = ''
-    return
-  }
-
-  selectedFile.value = file
-  console.log('✅ File selected:', file.name, file.size, 'bytes')
 }
 
 const uploadAudio = async () => {
@@ -760,7 +857,6 @@ const uploadAudio = async () => {
   formData.append('audio', selectedFile.value)
 
   try {
-    // ✅ Endpoint corretto: /episodes/:id/upload
     await api.post(`/episodes/${selectedEpisode.value._id}/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -774,35 +870,32 @@ const uploadAudio = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Uploaded',
+      summary: 'Upload Complete',
       detail: 'Audio file uploaded successfully',
       life: 3000
     })
 
     uploadDialog.value = false
-    selectedFile.value = null
-
-    // Reset input file
-    if (fileInput.value) {
-      fileInput.value.value = ''
-    }
-
     await loadEpisodes()
   } catch (error) {
-    console.error('Error uploading audio:', error)
+    console.error('Upload error:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.error || 'Failed to upload audio',
+      summary: 'Upload Failed',
+      detail: error.response?.data?.error || 'Failed to upload audio file',
       life: 3000
     })
   } finally {
     uploading.value = false
+    selectedFile.value = null
     uploadProgress.value = 0
+    // Reset dell'input file
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
   }
 }
 
-// Audio Preview Functions
 const previewAudio = (episode) => {
   previewEpisode.value = episode
   previewDialog.value = true
@@ -811,14 +904,16 @@ const previewAudio = (episode) => {
 const closePreview = () => {
   if (audioPlayer.value) {
     audioPlayer.value.pause()
+    audioPlayer.value.currentTime = 0
   }
   previewDialog.value = false
+  previewEpisode.value = null
 }
 
 const confirmDeleteAudio = () => {
   confirm.require({
-    message: 'Are you sure you want to delete the audio file?',
-    header: 'Delete Audio',
+    message: 'Delete the audio file for this episode?',
+    header: 'Confirm Delete',
     icon: 'pi pi-exclamation-triangle',
     acceptClass: 'p-button-danger',
     accept: () => deleteAudio()
@@ -830,16 +925,18 @@ const deleteAudio = async () => {
 
   try {
     await api.delete(`/episodes/${previewEpisode.value._id}/audio`)
+
     toast.add({
       severity: 'success',
       summary: 'Deleted',
       detail: 'Audio file deleted successfully',
       life: 3000
     })
-    previewDialog.value = false
+
+    closePreview()
     await loadEpisodes()
   } catch (error) {
-    console.error('Error deleting audio:', error)
+    console.error('Delete audio error:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
@@ -850,15 +947,14 @@ const deleteAudio = async () => {
 }
 
 const downloadAudio = async () => {
-  if (!previewEpisode.value?.audioFile?.storedFilename) return
+  if (!previewEpisode.value) return
 
   const audioUrl = getAudioUrl(previewEpisode.value._id)
-
   if (!audioUrl) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Audio file not found',
+      detail: 'Audio file not available',
       life: 3000
     })
     return
@@ -969,6 +1065,18 @@ const formatDate = (date) => {
   })
 }
 
+const formatDateTime = (date) => {
+  if (!date) return '-'
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
 const formatDuration = (value) => {
   if (!value) return '-'
 
@@ -1044,6 +1152,40 @@ onMounted(async () => {
   color: #3b82f6;
 }
 
+.schedule-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.schedule-day {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schedule-day small {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.schedule-airdate {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #374151;
+}
+
+.schedule-airdate i {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.no-schedule {
+  color: #9ca3af;
+}
+
 .action-buttons {
   display: flex;
   gap: 0.25rem;
@@ -1101,6 +1243,69 @@ onMounted(async () => {
 .hint {
   color: #9ca3af;
   font-size: 0.8rem;
+}
+
+.suggested-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #3b82f6;
+  margin-top: 0.5rem;
+}
+
+.suggested-date i {
+  color: #f59e0b;
+}
+
+/* Schedule Info Box */
+.schedule-info-box {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.schedule-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.schedule-header i {
+  color: #3b82f6;
+}
+
+.schedule-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.schedule-item strong {
+  color: #374151;
+}
+
+.schedule-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.schedule-hint i {
+  color: #9ca3af;
 }
 
 .upload-section {
@@ -1164,11 +1369,20 @@ onMounted(async () => {
   gap: 0.5rem;
   color: #6b7280;
   font-size: 0.95rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .show-name i {
   color: #3b82f6;
+}
+
+.preview-schedule {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
 }
 
 .audio-player {

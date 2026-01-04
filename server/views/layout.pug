@@ -12,10 +12,62 @@ html(lang="en")
 
         //- CSS
         link(rel="stylesheet" href="/public/css/style.css")
+        link(rel="stylesheet" href="/public/css/schedule.css")
         link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css")
 
         //- Alpine.js
         script(defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js")
+
+        style.
+            /* Now Playing Metadata Styles */
+            .now-playing {
+                padding: 0.75rem 0;
+                text-align: center;
+                min-height: 3.5rem;
+            }
+
+            .now-playing-content {
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .track-info {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                font-size: 0.9rem;
+            }
+
+            .track-title {
+                font-weight: 700;
+                color: #fff;
+            }
+
+            .track-artist {
+                color: rgba(255, 255, 255, 0.7);
+            }
+
+            .show-name {
+                font-size: 0.75rem;
+                color: rgba(255, 255, 255, 0.5);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .now-playing-label {
+                font-size: 0.65rem;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #e53935;
+                margin-bottom: 0.25rem;
+            }
+
+            .metadata-loading {
+                color: rgba(255, 255, 255, 0.4);
+                font-size: 0.8rem;
+            }
 
     body
         header.site-header
@@ -35,19 +87,39 @@ html(lang="en")
 
             //- Player
 
-            .container(style="max-width: 361px;")
-                .player(x-data="{ playing: false, volume: 80 }")
+            .container(style="max-width: 480px;")
+                .player(x-data="radioPlayer()" x-init="init()")
                     .player-controls
-                        audio#player-audio(x-ref="audio" src="https://bugradio2024.out.airtime.pro/bugradio2024_a" preload="none" crossorigin="anonymous")
-                        button.btn-play(@click="playing ? $refs.audio.pause() : $refs.audio.play(); playing = !playing")
+                        audio#player-audio(
+                            x-ref="audio"
+                            :src="streamUrl"
+                            preload="none"
+                            crossorigin="anonymous"
+                        )
+                        button.btn-play(@click="togglePlay()")
                             i.fa-solid.fa-play(x-show="!playing")
                             i.fa-solid.fa-pause(x-show="playing")
                     #visualizer.audio-visualizer
                     .player-status
-                        .live-indicator#live-indicator
-                            span#live-text OFF
-                            i.fa-regular.fa-circle-dot#live-icon
+                        .live-indicator(:class="isLive ? 'on-air' : 'offline'")
+                            span(x-text="isLive ? 'ON AIR' : 'OFF'")
+                            i.fa-regular.fa-circle-dot(:style="{ color: isLive ? '#e53935' : '#333' }")
 
+                //- Now Playing Metadata
+                .now-playing(x-show="isLive")
+                    template(x-if="currentTrack.title")
+                        .now-playing-content
+                            .now-playing-label NOW PLAYING
+                            .track-info
+                                span.track-title(x-text="currentTrack.title")
+                                template(x-if="currentTrack.artist")
+                                    span.track-artist
+                                        | —
+                                        span(x-text="currentTrack.artist")
+                            template(x-if="currentShow")
+                                .show-name(x-text="currentShow")
+                    template(x-if="!currentTrack.title && isLive")
+                        .metadata-loading Loading...
 
 
 
@@ -56,34 +128,85 @@ html(lang="en")
         script(src="/public/js/audio-visualizer.js")
 
         script.
-            (function() {
-                const indicator = document.getElementById('live-indicator');
-                const text = document.getElementById('live-text');
-                const audioSrc = 'https://bugradio2024.out.airtime.pro/bugradio2024_a';
+            function radioPlayer() {
+                return {
+                    playing: false,
+                    isLive: false,
+                    streamUrl: 'https://bugradio2024.out.airtime.pro/bugradio2024_a',
+                    apiUrl: 'https://bugradio2024.airtime.pro/api/live-info-v2',
+                    currentTrack: {
+                        title: '',
+                        artist: ''
+                    },
+                    currentShow: '',
+                    metadataInterval: null,
+                    streamCheckInterval: null,
 
-                function checkStream() {
-                    const audio = new Audio(audioSrc);
-                    audio.volume = 0;
+                    init() {
+                        this.checkStream();
+                        this.fetchMetadata();
 
-                    audio.play()
-                        .then(() => {
-                            audio.pause();
-                            indicator.classList.remove('offline');
-                            indicator.classList.add('on-air');
-                            icon.style.color = '#e53935';
-                            text.textContent = 'ON AIR';
-                    })
-                    .catch(() => {
-                        indicator.classList.remove('on-air');
-                        indicator.classList.add('offline');
-                        icon.style.color = '#333';
-                        text.textContent = 'OFF';
-                    });
+                        // Check stream status every 30 seconds
+                        this.streamCheckInterval = setInterval(() => this.checkStream(), 30000);
+
+                        // Fetch metadata every 10 seconds
+                        this.metadataInterval = setInterval(() => this.fetchMetadata(), 10000);
+                    },
+
+                    togglePlay() {
+                        if (this.playing) {
+                            this.$refs.audio.pause();
+                        } else {
+                            this.$refs.audio.play();
+                        }
+                        this.playing = !this.playing;
+                    },
+
+                    checkStream() {
+                        const testAudio = new Audio(this.streamUrl);
+                        testAudio.volume = 0;
+
+                        testAudio.play()
+                            .then(() => {
+                                testAudio.pause();
+                                this.isLive = true;
+                            })
+                            .catch(() => {
+                                this.isLive = false;
+                                this.currentTrack = { title: '', artist: '' };
+                                this.currentShow = '';
+                            });
+                    },
+
+                    async fetchMetadata() {
+                        if (!this.isLive) return;
+
+                        try {
+                            const response = await fetch(this.apiUrl);
+                            const data = await response.json();
+
+                            // Get current track info
+                            if (data.tracks && data.tracks.current) {
+                                const track = data.tracks.current;
+                                this.currentTrack = {
+                                    title: track.name || '',
+                                    artist: track.metadata?.artist || ''
+                                };
+                            }
+
+                            // Get current show info
+                            if (data.shows && data.shows.current) {
+                                this.currentShow = data.shows.current.name || '';
+                            } else {
+                                this.currentShow = '';
+                            }
+
+                        } catch (error) {
+                            console.warn('Could not fetch metadata:', error);
+                        }
+                    }
                 }
-
-                checkStream();
-                setInterval(checkStream, 30000);
-            })();
+            }
 
         main
             block content
