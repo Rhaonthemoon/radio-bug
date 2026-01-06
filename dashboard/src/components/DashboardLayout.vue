@@ -181,7 +181,7 @@ const handleLogout = () => {
   min-height: 100vh;
 }
 
-.sidebar {
+.sidebar[data-v-430db805] {
   width: 280px;
   background: #1e293b;
   color: white;
@@ -190,6 +190,7 @@ const handleLogout = () => {
   position: fixed;
   height: 100vh;
   overflow-y: auto;
+  z-index: 1000;
 }
 
 .sidebar-header {

@@ -49,6 +49,35 @@ const episodeSchema = new mongoose.Schema({
         }
     },
 
+    // ✅ Campo per immagine episodio
+    image: {
+        filename: String,          // nome originale del file
+        storedFilename: String,    // nome file salvato su disco
+        path: String,              // percorso completo
+        size: Number,              // dimensione in bytes
+        mimetype: String,          // tipo MIME (image/jpeg, image/png, etc.)
+        uploadedAt: Date,
+        exists: {
+            type: Boolean,
+            default: false
+        }
+    },
+
+    // ✅ Mixcloud integration
+    mixcloud: {
+        status: {
+            type: String,
+            enum: ['uploading', 'uploaded', 'failed', null],
+            default: null
+        },
+        key: {
+            type: String,           // es: '/OnAirOnSite/episode-slug/'
+            trim: true
+        },
+        uploadedAt: Date,
+        error: String               // messaggio errore se fallito
+    },
+
     // Link esterni (opzionali)
     externalLinks: {
         mixcloudUrl: {

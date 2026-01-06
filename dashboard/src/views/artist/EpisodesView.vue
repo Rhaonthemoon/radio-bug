@@ -68,6 +68,23 @@
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown"
           responsiveLayout="scroll"
         >
+          <!-- ✅ Image Column -->
+          <Column header="Image" style="width: 80px;">
+            <template #body="{ data }">
+              <div class="episode-image-cell">
+                <img
+                  v-if="data.image?.exists"
+                  :src="getImageUrl(data)"
+                  :alt="data.title"
+                  class="episode-thumbnail"
+                />
+                <div v-else class="no-image">
+                  <i class="pi pi-image"></i>
+                </div>
+              </div>
+            </template>
+          </Column>
+
           <Column field="title" header="Title" sortable style="min-width: 250px;">
             <template #body="{ data }">
               <div class="episode-title-cell">
@@ -128,7 +145,7 @@
           </Column>
 
           <!-- ✅ Azioni disponibili per Admin E Artist -->
-          <Column header="Actions" style="width: 180px;">
+          <Column header="Actions" style="width: 200px;">
             <template #body="{ data }">
               <div class="action-buttons">
                 <Button
@@ -138,11 +155,20 @@
                   text
                   rounded
                 />
+                <!-- ✅ Image Upload Button -->
+                <Button
+                  icon="pi pi-image"
+                  @click="openImageUploadDialog(data)"
+                  v-tooltip.top="'Image'"
+                  :severity="data.image?.exists ? 'success' : 'warning'"
+                  text
+                  rounded
+                />
                 <Button
                   icon="pi pi-upload"
                   @click="openUploadDialog(data)"
                   v-tooltip.top="'Upload Audio'"
-                  :severity="data.audioFile?.exists ? 'secondary' : 'warning'"
+                  :severity="data.audioFile?.exists ? 'success' : 'warning'"
                   text
                   rounded
                 />
@@ -406,6 +432,90 @@
       </template>
     </Dialog>
 
+    <!-- ✅ Upload Image Dialog -->
+    <Dialog
+      v-model:visible="imageUploadDialog"
+      header="Upload Episode Image"
+      modal
+      :style="{ width: '500px' }"
+    >
+      <div class="upload-section">
+        <p v-if="selectedEpisode"><strong>Episode:</strong> {{ selectedEpisode.title }}</p>
+
+        <!-- Current Image Preview -->
+        <div v-if="selectedEpisode?.image?.exists" class="current-image">
+          <p><strong>Current Image:</strong></p>
+          <img :src="getImageUrl(selectedEpisode)" class="image-preview" />
+          <Button
+            label="Remove Image"
+            icon="pi pi-trash"
+            severity="danger"
+            size="small"
+            outlined
+            @click="confirmDeleteImage"
+            class="mt-2"
+          />
+        </div>
+
+        <Message severity="info" :closable="false">
+          <p><strong>Requirements:</strong></p>
+          <ul>
+            <li>Format: JPG, PNG, or WebP</li>
+            <li>Recommended: 1400x1400px (square)</li>
+            <li>Max size: 10 MB</li>
+          </ul>
+        </Message>
+
+        <!-- Input file nativo -->
+        <div class="file-upload-native">
+          <input
+            type="file"
+            ref="imageFileInput"
+            accept="image/jpeg,image/png,image/webp"
+            @change="onImageSelectNative"
+            style="display: none"
+          />
+
+          <Button
+            label="Select Image"
+            icon="pi pi-image"
+            @click="triggerImageFileInput"
+            :disabled="uploadingImage"
+            outlined
+            severity="secondary"
+            class="w-full select-file-btn"
+          />
+        </div>
+
+        <div v-if="selectedImageFile" class="file-info">
+          <p><strong>Selected:</strong> {{ selectedImageFile.name }}</p>
+          <p><strong>Size:</strong> {{ formatFileSize(selectedImageFile.size) }}</p>
+          <img v-if="imagePreviewUrl" :src="imagePreviewUrl" class="image-preview mt-2" />
+        </div>
+
+        <div v-if="uploadingImage" class="upload-progress">
+          <p>Uploading... {{ imageUploadProgress }}%</p>
+          <ProgressBar :value="imageUploadProgress" />
+        </div>
+      </div>
+
+      <template #footer>
+        <Button
+          label="Cancel"
+          @click="closeImageUploadDialog"
+          :disabled="uploadingImage"
+          text
+        />
+        <Button
+          label="Upload"
+          @click="uploadImage"
+          :loading="uploadingImage"
+          :disabled="!selectedImageFile || uploadingImage"
+          icon="pi pi-upload"
+        />
+      </template>
+    </Dialog>
+
     <!-- ✅ Audio Preview Dialog -->
     <Dialog
       v-model:visible="previewDialog"
@@ -414,11 +524,21 @@
       :style="{ width: '500px' }"
     >
       <div v-if="previewEpisode" class="preview-section">
-        <h3>{{ previewEpisode.title }}</h3>
-        <p class="show-name">
-          <i class="pi pi-microphone"></i>
-          {{ previewEpisode.showId?.title }}
-        </p>
+        <!-- ✅ Preview with Image -->
+        <div class="preview-header">
+          <img
+            v-if="previewEpisode.image?.exists"
+            :src="getImageUrl(previewEpisode)"
+            class="preview-image"
+          />
+          <div class="preview-info">
+            <h3>{{ previewEpisode.title }}</h3>
+            <p class="show-name">
+              <i class="pi pi-microphone"></i>
+              {{ previewEpisode.showId?.title }}
+            </p>
+          </div>
+        </div>
 
         <div class="audio-player" v-if="previewEpisode.audioFile?.exists">
           <audio
@@ -491,6 +611,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import { useAuthStore } from '@/stores/auth'
 import { useEpisodesStore } from '@/stores/episodes'
 import api from '@/api/axios'
@@ -500,6 +621,7 @@ import DashboardLayout from '@/components/DashboardLayout.vue'
 const authStore = useAuthStore()
 const episodesStore = useEpisodesStore()
 const toast = useToast()
+const confirm = useConfirm()
 
 // State
 const episodes = ref([])
@@ -509,6 +631,14 @@ const saving = ref(false)
 const deleting = ref(false)
 const uploading = ref(false)
 const uploadProgress = ref(0)
+
+// ✅ Image upload state
+const uploadingImage = ref(false)
+const imageUploadProgress = ref(0)
+const selectedImageFile = ref(null)
+const imagePreviewUrl = ref(null)
+const imageFileInput = ref(null)
+const imageUploadDialog = ref(false)
 
 const episodeDialog = ref(false)
 const uploadDialog = ref(false)
@@ -732,7 +862,7 @@ const deleteEpisode = async (id) => {
   }
 }
 
-// ✅ Upload Functions
+// ✅ Audio Upload Functions
 const openUploadDialog = (episode) => {
   selectedEpisode.value = episode
   selectedFile.value = null
@@ -833,6 +963,140 @@ const uploadAudio = async () => {
   }
 }
 
+// ✅ Image Upload Functions
+const openImageUploadDialog = (episode) => {
+  selectedEpisode.value = episode
+  selectedImageFile.value = null
+  imagePreviewUrl.value = null
+  imageUploadProgress.value = 0
+  imageUploadDialog.value = true
+}
+
+const closeImageUploadDialog = () => {
+  imageUploadDialog.value = false
+  selectedImageFile.value = null
+  imagePreviewUrl.value = null
+  if (imageFileInput.value) {
+    imageFileInput.value.value = ''
+  }
+}
+
+const triggerImageFileInput = () => {
+  if (imageFileInput.value) {
+    imageFileInput.value.click()
+  }
+}
+
+const onImageSelectNative = (event) => {
+  const file = event.target.files[0]
+
+  if (!file) return
+
+  // Verifica formato
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+  if (!validTypes.includes(file.type)) {
+    toast.add({
+      severity: 'error',
+      summary: 'Invalid Format',
+      detail: 'Please select a JPG, PNG, or WebP image',
+      life: 3000
+    })
+    if (imageFileInput.value) imageFileInput.value.value = ''
+    return
+  }
+
+  // Verifica dimensione (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    toast.add({
+      severity: 'error',
+      summary: 'File Too Large',
+      detail: 'Maximum size is 10MB',
+      life: 3000
+    })
+    if (imageFileInput.value) imageFileInput.value.value = ''
+    return
+  }
+
+  selectedImageFile.value = file
+  imagePreviewUrl.value = URL.createObjectURL(file)
+  console.log('✅ Image selected:', file.name, file.size, 'bytes')
+}
+
+const uploadImage = async () => {
+  if (!selectedImageFile.value || !selectedEpisode.value) return
+
+  uploadingImage.value = true
+  imageUploadProgress.value = 0
+
+  const formData = new FormData()
+  formData.append('image', selectedImageFile.value)
+
+  try {
+    await api.post(`/episodes/${selectedEpisode.value._id}/upload-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        imageUploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+      }
+    })
+
+    toast.add({
+      severity: 'success',
+      summary: 'Uploaded',
+      detail: 'Image uploaded successfully',
+      life: 3000
+    })
+
+    closeImageUploadDialog()
+    await loadEpisodes()
+  } catch (error) {
+    console.error('Error uploading image:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: error.response?.data?.error || 'Failed to upload image',
+      life: 5000
+    })
+  } finally {
+    uploadingImage.value = false
+    imageUploadProgress.value = 0
+  }
+}
+
+const confirmDeleteImage = () => {
+  confirm.require({
+    message: 'Are you sure you want to delete this image?',
+    header: 'Confirm Deletion',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: () => deleteImage()
+  })
+}
+
+const deleteImage = async () => {
+  if (!selectedEpisode.value) return
+
+  try {
+    await api.delete(`/episodes/${selectedEpisode.value._id}/image`)
+    toast.add({
+      severity: 'success',
+      summary: 'Deleted',
+      detail: 'Image deleted successfully',
+      life: 3000
+    })
+    closeImageUploadDialog()
+    await loadEpisodes()
+  } catch (error) {
+    console.error('Error deleting image:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to delete image',
+      life: 3000
+    })
+  }
+}
+
+// Audio Preview Functions
 const previewAudio = (episode) => {
   previewEpisode.value = episode
   previewDialog.value = true
@@ -934,6 +1198,14 @@ const downloadAudio = async () => {
       life: 3000
     })
   }
+}
+
+// ✅ Helper Functions
+const getImageUrl = (episode) => {
+  if (!episode?.image?.storedFilename) return null
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+  const serverBase = API_BASE.replace('/api', '')
+  return `${serverBase}/uploads/episodes/images/${episode.image.storedFilename}`
 }
 
 const getAudioUrl = (episodeId) => {
@@ -1060,6 +1332,63 @@ onMounted(async () => {
   font-weight: 600;
   color: #374151;
   font-size: 0.875rem;
+}
+
+/* ✅ Image Styles */
+.episode-image-cell {
+  width: 60px;
+  height: 60px;
+}
+
+.episode-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.no-image {
+  width: 60px;
+  height: 60px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+}
+
+.current-image {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
+}
+
+.image-preview {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  display: block;
+}
+
+.preview-header {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.preview-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.preview-info h3 {
+  margin: 0 0 0.5rem;
 }
 
 .episode-title-cell {
@@ -1218,7 +1547,7 @@ onMounted(async () => {
   gap: 0.5rem;
   color: #6b7280;
   font-size: 0.95rem;
-  margin-bottom: 1.5rem;
+  margin: 0;
 }
 
 .show-name i {
@@ -1251,5 +1580,9 @@ onMounted(async () => {
 
 .w-full {
   width: 100%;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
 }
 </style>

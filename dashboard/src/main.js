@@ -27,6 +27,13 @@ import Avatar from 'primevue/avatar'
 import Badge from 'primevue/badge'
 import Dropdown from 'primevue/dropdown'
 import ProgressBar from 'primevue/progressbar'
+// Components
+import Message from 'primevue/message'
+
+// Directives
+import Tooltip from 'primevue/tooltip'
+
+
 const app = createApp(App)
 
 app.use(createPinia())
@@ -34,7 +41,14 @@ app.use(router)
 app.use(PrimeVue)
 app.use(ToastService)
 app.use(ConfirmationService)
+// Components
 
+// Registra
+app.component('Message', Message)
+app.directive('tooltip', Tooltip)
+// Registra
+app.component('Message', Message)
+app.directive('tooltip', Tooltip)
 // Register PrimeVue components globally
 app.component('Button', Button)
 app.component('InputText', InputText)
