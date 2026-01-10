@@ -22,6 +22,15 @@ const ShowSchema = new mongoose.Schema({
         url: { type: String, required: true },
         alt: String
     },
+    // Audio promozionale/jingle dello show
+    audio: {
+        filename: { type: String, default: null },
+        originalName: { type: String, default: null },
+        url: { type: String, default: null },
+        duration: { type: Number, default: null }, // durata in secondi
+        bitrate: { type: Number, default: null },
+        uploadedAt: { type: Date, default: null }
+    },
     genres: [String],
     tags: [String],
     schedule: {

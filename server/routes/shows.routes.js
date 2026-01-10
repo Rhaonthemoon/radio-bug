@@ -3,6 +3,11 @@ const router = express.Router();
 const Show = require('../models/Shows');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { sendShowApprovedEmail, sendShowRejectedEmail } = require('../config/email');
+const {
+    uploadShowAudio,
+    validateShowAudioBitrate,
+    deleteShowAudioFile
+} = require('../middleware/uploadMiddleware');
 
 // ==================== ROTTE PUBBLICHE ====================
 
@@ -150,6 +155,143 @@ router.get('/artist/approved', authMiddleware, async (req, res) => {
     }
 });
 
+// ==================== ROTTE AUDIO SHOW ====================
+
+/**
+ * POST /api/shows/:id/audio
+ * Upload audio per uno show (jingle/intro)
+ * ACCESSIBILE A: Admin (tutti) e Artist (solo propri show approvati)
+ */
+router.post('/:id/audio',
+    authMiddleware,
+    uploadShowAudio.single('audio'),
+    validateShowAudioBitrate,
+    async (req, res) => {
+        try {
+            const show = await Show.findById(req.params.id);
+
+            if (!show) {
+                // Elimina il file caricato se lo show non esiste
+                if (req.file) {
+                    deleteShowAudioFile(req.file.filename);
+                }
+                return res.status(404).json({ error: 'Show non trovato' });
+            }
+
+            // Verifica permessi
+            const isAdmin = req.user.role === 'admin';
+            const isOwner = show.createdBy.toString() === req.user._id.toString();
+
+            if (!isAdmin && !isOwner) {
+                if (req.file) {
+                    deleteShowAudioFile(req.file.filename);
+                }
+                return res.status(403).json({ error: 'Non autorizzato' });
+            }
+
+            // Se artista, verifica che lo show sia approvato
+            if (!isAdmin && show.requestStatus !== 'approved') {
+                if (req.file) {
+                    deleteShowAudioFile(req.file.filename);
+                }
+                return res.status(403).json({
+                    error: 'Puoi caricare audio solo per show approvati'
+                });
+            }
+
+            // Se esiste già un audio, elimina il vecchio file
+            if (show.audio && show.audio.filename) {
+                deleteShowAudioFile(show.audio.filename);
+                console.log(`✔ Vecchio audio eliminato: ${show.audio.filename}`);
+            }
+
+            // Aggiorna lo show con i dati del nuovo audio
+            const audioUrl = `/uploads/shows/audio/${req.file.filename}`;
+
+            show.audio = {
+                filename: req.file.filename,
+                originalName: req.file.originalname,
+                url: audioUrl,
+                duration: req.audioMetadata.duration,
+                bitrate: req.audioMetadata.bitrate,
+                uploadedAt: new Date()
+            };
+
+            await show.save();
+
+            console.log(`✔ Audio caricato per show "${show.title}": ${req.file.filename}`);
+
+            res.json({
+                message: 'Audio caricato con successo',
+                audio: show.audio
+            });
+        } catch (error) {
+            console.error('Errore upload audio show:', error);
+
+            // Elimina il file in caso di errore
+            if (req.file) {
+                deleteShowAudioFile(req.file.filename);
+            }
+
+            res.status(500).json({ error: 'Errore nel caricamento dell\'audio' });
+        }
+    }
+);
+
+/**
+ * DELETE /api/shows/:id/audio
+ * Elimina audio di uno show
+ * ACCESSIBILE A: Admin (tutti) e Artist (solo propri show)
+ */
+router.delete('/:id/audio', authMiddleware, async (req, res) => {
+    try {
+        const show = await Show.findById(req.params.id);
+
+        if (!show) {
+            return res.status(404).json({ error: 'Show non trovato' });
+        }
+
+        // Verifica permessi
+        const isAdmin = req.user.role === 'admin';
+        const isOwner = show.createdBy.toString() === req.user._id.toString();
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'Non autorizzato' });
+        }
+
+        // Verifica che esista un audio da eliminare
+        if (!show.audio || !show.audio.filename) {
+            return res.status(404).json({ error: 'Nessun audio da eliminare' });
+        }
+
+        // Elimina il file fisico
+        const deleted = deleteShowAudioFile(show.audio.filename);
+
+        if (!deleted) {
+            console.warn(`⚠ File audio non trovato: ${show.audio.filename}`);
+        }
+
+        // Rimuovi i dati audio dallo show
+        show.audio = {
+            filename: null,
+            originalName: null,
+            url: null,
+            duration: null,
+            bitrate: null,
+            uploadedAt: null
+        };
+
+        await show.save();
+
+        console.log(`✔ Audio eliminato per show "${show.title}"`);
+
+        res.json({ message: 'Audio eliminato con successo' });
+    } catch (error) {
+        console.error('Errore eliminazione audio show:', error);
+        res.status(500).json({ error: 'Errore nell\'eliminazione dell\'audio' });
+    }
+});
+
 // ==================== ROTTE ADMIN - GESTIONE COMPLETA ====================
 
 /**
@@ -202,11 +344,19 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
  */
 router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        const show = await Show.findByIdAndDelete(req.params.id);
+        const show = await Show.findById(req.params.id);
 
         if (!show) {
             return res.status(404).json({ error: 'Show non trovato' });
         }
+
+        // Elimina l'audio associato se esiste
+        if (show.audio && show.audio.filename) {
+            deleteShowAudioFile(show.audio.filename);
+            console.log(`✔ Audio eliminato insieme allo show: ${show.audio.filename}`);
+        }
+
+        await Show.findByIdAndDelete(req.params.id);
 
         res.json({ message: 'Show eliminato con successo' });
     } catch (error) {

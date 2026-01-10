@@ -90,6 +90,25 @@
               </div>
             </template>
           </Column>
+          <!-- Audio Column -->
+          <Column header="Audio" style="width: 120px;">
+            <template #body="slotProps">
+              <div class="audio-status">
+                <Tag
+                  v-if="slotProps.data.audio?.filename"
+                  value="Audio"
+                  severity="success"
+                  icon="pi pi-volume-up"
+                />
+                <Tag
+                  v-else
+                  value="No Audio"
+                  severity="secondary"
+                  icon="pi pi-volume-off"
+                />
+              </div>
+            </template>
+          </Column>
           <Column field="requestStatus" header="Request Status" sortable>
             <template #body="slotProps">
               <Tag
@@ -114,7 +133,7 @@
               ></i>
             </template>
           </Column>
-          <Column header="Actions" style="width: 250px;">
+          <Column header="Actions" style="width: 300px;">
             <template #body="slotProps">
               <div class="action-buttons">
                 <!-- Azioni per richieste pending -->
@@ -133,6 +152,16 @@
                   severity="danger"
                   @click="rejectRequest(slotProps.data)"
                   v-tooltip.top="'Reject Request'"
+                />
+
+                <!-- Audio button -->
+                <Button
+                  icon="pi pi-volume-up"
+                  rounded
+                  outlined
+                  :severity="slotProps.data.audio?.filename ? 'success' : 'secondary'"
+                  @click="openAudioDialog(slotProps.data)"
+                  v-tooltip.top="'Manage Audio'"
                 />
 
                 <!-- Azioni standard -->
@@ -166,6 +195,151 @@
         </DataTable>
       </template>
     </Card>
+
+    <!-- Dialog Gestione Audio Show -->
+    <Dialog
+      v-model:visible="audioDialogVisible"
+      header="Gestione Audio Show"
+      :modal="true"
+      :style="{ width: '550px' }"
+    >
+      <div class="audio-dialog-content" v-if="selectedShowForAudio">
+        <div class="show-info-header">
+          <h4>{{ selectedShowForAudio.title }}</h4>
+          <p class="artist-name">{{ selectedShowForAudio.artist?.name }}</p>
+        </div>
+
+        <!-- Se c'è già un audio -->
+        <div v-if="selectedShowForAudio.audio?.filename" class="current-audio-section">
+          <div class="audio-info-card">
+            <div class="audio-icon">
+              <i class="pi pi-file-audio"></i>
+            </div>
+            <div class="audio-details">
+              <span class="audio-filename">{{ selectedShowForAudio.audio.originalName || selectedShowForAudio.audio.filename }}</span>
+              <div class="audio-meta">
+                <span v-if="selectedShowForAudio.audio.duration">
+                  <i class="pi pi-clock"></i> {{ formatDuration(selectedShowForAudio.audio.duration) }}
+                </span>
+                <span v-if="selectedShowForAudio.audio.bitrate">
+                  <i class="pi pi-chart-bar"></i> {{ selectedShowForAudio.audio.bitrate }} kbps
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Player -->
+          <div class="audio-player-wrapper">
+            <audio
+              ref="audioPlayerRef"
+              :src="getAudioUrl(selectedShowForAudio)"
+              controls
+              class="audio-player"
+              @error="handleAudioError"
+            ></audio>
+          </div>
+
+          <!-- Azioni Audio -->
+          <div class="audio-actions">
+            <Button
+              label="Play"
+              icon="pi pi-play"
+              severity="success"
+              @click="playAudio"
+              :disabled="isPlaying"
+            />
+            <Button
+              label="Pause"
+              icon="pi pi-pause"
+              severity="secondary"
+              @click="pauseAudio"
+              :disabled="!isPlaying"
+            />
+            <Button
+              label="Download"
+              icon="pi pi-download"
+              severity="info"
+              @click="downloadAudio"
+            />
+            <Button
+              label="Delete"
+              icon="pi pi-trash"
+              severity="danger"
+              outlined
+              @click="confirmDeleteAudio"
+            />
+          </div>
+        </div>
+
+        <!-- Se non c'è audio -->
+        <div v-else class="no-audio-section">
+          <div class="no-audio-icon">
+            <i class="pi pi-volume-off"></i>
+          </div>
+          <p>Nessun audio caricato per questo show</p>
+        </div>
+
+        <!-- Upload Section -->
+        <Divider />
+
+        <div class="upload-section">
+          <h5>{{ selectedShowForAudio.audio?.filename ? 'Sostituisci Audio' : 'Carica Audio' }}</h5>
+          <p class="upload-hint">
+            Formati accettati: MP3 | Max 500MB | Min 128kbps | Max 60 minuti
+          </p>
+
+          <div class="file-upload-wrapper">
+            <input
+              type="file"
+              ref="audioFileInput"
+              accept="audio/mp3,audio/mpeg"
+              @change="onAudioFileChange"
+              :disabled="audioUploading"
+              class="file-input"
+            />
+            <Button
+              label="Seleziona file MP3"
+              icon="pi pi-folder-open"
+              severity="secondary"
+              outlined
+              @click="triggerFileInput"
+              :disabled="audioUploading"
+              class="select-file-button"
+            />
+          </div>
+
+          <div v-if="selectedAudioFile" class="selected-file-info">
+            <i class="pi pi-file"></i>
+            <span>{{ selectedAudioFile.name }}</span>
+            <span class="file-size">({{ formatFileSize(selectedAudioFile.size) }})</span>
+            <Button
+              icon="pi pi-times"
+              severity="danger"
+              text
+              rounded
+              size="small"
+              @click="clearSelectedFile"
+              v-tooltip.top="'Rimuovi'"
+            />
+          </div>
+
+          <Button
+            v-if="selectedAudioFile"
+            label="Carica Audio"
+            icon="pi pi-upload"
+            @click="uploadAudio"
+            :loading="audioUploading"
+            class="upload-button"
+          />
+        </div>
+
+        <!-- Progress durante upload -->
+        <div v-if="audioUploading" class="upload-progress">
+          <ProgressBar :value="uploadProgress" />
+          <p>Caricamento in corso...</p>
+        </div>
+      </div>
+    </Dialog>
 
     <!-- Dialog Crea/Modifica Show -->
     <Dialog
@@ -489,6 +663,16 @@ const dialogVisible = ref(false)
 const editingShow = ref(null)
 const currentFilter = ref('pending')
 
+// Audio Dialog State
+const audioDialogVisible = ref(false)
+const selectedShowForAudio = ref(null)
+const selectedAudioFile = ref(null)
+const audioUploading = ref(false)
+const uploadProgress = ref(0)
+const isPlaying = ref(false)
+const audioPlayerRef = ref(null)
+const audioFileInput = ref(null)
+
 const formData = ref({
   title: '',
   description: '',
@@ -637,6 +821,223 @@ const getStatusSeverity = (status) => {
   return map[status] || 'info'
 }
 
+// ==================== AUDIO MANAGEMENT FUNCTIONS ====================
+
+const openAudioDialog = (show) => {
+  selectedShowForAudio.value = show
+  selectedAudioFile.value = null
+  isPlaying.value = false
+  audioDialogVisible.value = true
+}
+
+const getAudioUrl = (show) => {
+  if (!show?.audio?.url) return ''
+  // Se l'URL è relativo, costruisci l'URL completo
+  if (show.audio.url.startsWith('/')) {
+    const baseUrl = API_URL.replace('/api', '')
+    return `${baseUrl}${show.audio.url}`
+  }
+  return show.audio.url
+}
+
+const formatDuration = (seconds) => {
+  if (!seconds) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B'
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
+}
+
+const playAudio = () => {
+  if (audioPlayerRef.value) {
+    audioPlayerRef.value.play()
+    isPlaying.value = true
+  }
+}
+
+const pauseAudio = () => {
+  if (audioPlayerRef.value) {
+    audioPlayerRef.value.pause()
+    isPlaying.value = false
+  }
+}
+
+const handleAudioError = () => {
+  toast.add({
+    severity: 'error',
+    summary: 'Errore',
+    detail: 'Impossibile caricare il file audio',
+    life: 3000
+  })
+}
+
+const downloadAudio = () => {
+  if (!selectedShowForAudio.value?.audio?.url) return
+
+  const url = getAudioUrl(selectedShowForAudio.value)
+  const filename = selectedShowForAudio.value.audio.originalName ||
+    selectedShowForAudio.value.audio.filename ||
+    'audio.mp3'
+
+  // Crea un link temporaneo per il download
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  toast.add({
+    severity: 'info',
+    summary: 'Download',
+    detail: 'Download avviato',
+    life: 2000
+  })
+}
+
+const triggerFileInput = () => {
+  if (audioFileInput.value) {
+    audioFileInput.value.click()
+  }
+}
+
+const onAudioFileChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    // Validazione base lato client
+    if (!file.type.includes('audio/mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Formato non valido',
+        detail: 'Seleziona un file MP3',
+        life: 3000
+      })
+      return
+    }
+    selectedAudioFile.value = file
+  }
+}
+
+const clearSelectedFile = () => {
+  selectedAudioFile.value = null
+  if (audioFileInput.value) {
+    audioFileInput.value.value = ''
+  }
+}
+
+const uploadAudio = async () => {
+  if (!selectedAudioFile.value || !selectedShowForAudio.value) return
+
+  audioUploading.value = true
+  uploadProgress.value = 0
+
+  const formData = new FormData()
+  formData.append('audio', selectedAudioFile.value)
+
+  try {
+    const response = await api.post(
+      `${API_URL}/shows/${selectedShowForAudio.value._id}/audio`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          uploadProgress.value = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          )
+        }
+      }
+    )
+
+    // Aggiorna lo show con i nuovi dati audio
+    selectedShowForAudio.value.audio = response.data.audio
+
+    toast.add({
+      severity: 'success',
+      summary: 'Audio caricato',
+      detail: 'Il file audio è stato caricato con successo',
+      life: 3000
+    })
+
+    // Aggiorna la lista degli show
+    await showsStore.fetchShows()
+
+    // Reset
+    selectedAudioFile.value = null
+
+  } catch (error) {
+    console.error('Errore upload audio:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Errore',
+      detail: error.response?.data?.error || 'Errore nel caricamento dell\'audio',
+      life: 4000
+    })
+  } finally {
+    audioUploading.value = false
+    uploadProgress.value = 0
+  }
+}
+
+const confirmDeleteAudio = () => {
+  confirm.require({
+    message: 'Sei sicuro di voler eliminare questo file audio?',
+    header: 'Conferma Eliminazione',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Sì, elimina',
+    rejectLabel: 'Annulla',
+    acceptClass: 'p-button-danger',
+    accept: () => deleteAudio()
+  })
+}
+
+const deleteAudio = async () => {
+  if (!selectedShowForAudio.value) return
+
+  try {
+    await api.delete(`${API_URL}/shows/${selectedShowForAudio.value._id}/audio`)
+
+    // Reset audio data
+    selectedShowForAudio.value.audio = {
+      filename: null,
+      originalName: null,
+      url: null,
+      duration: null,
+      bitrate: null,
+      uploadedAt: null
+    }
+
+    toast.add({
+      severity: 'success',
+      summary: 'Audio eliminato',
+      detail: 'Il file audio è stato eliminato',
+      life: 3000
+    })
+
+    // Aggiorna la lista degli show
+    await showsStore.fetchShows()
+
+  } catch (error) {
+    console.error('Errore eliminazione audio:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Errore',
+      detail: error.response?.data?.error || 'Errore nell\'eliminazione dell\'audio',
+      life: 3000
+    })
+  }
+}
+
+// ==================== SHOW MANAGEMENT FUNCTIONS ====================
+
 const openDialog = (show = null) => {
   if (show) {
     editingShow.value = show
@@ -727,7 +1128,7 @@ const saveShow = async () => {
       timeSlot: formData.value.schedule.timeSlot || '',
       frequency: formData.value.schedule.frequency || 'weekly'
     },
-    genre: genresInput.value.split(',').map(g => g.trim()).filter(g => g),
+    genres: genresInput.value.split(',').map(g => g.trim()).filter(g => g),
     tags: tagsInput.value ? tagsInput.value.split(',').map(t => t.trim()).filter(t => t) : [],
     requestStatus: formData.value.requestStatus,
     status: formData.value.status,
@@ -808,8 +1209,8 @@ const rejectRequest = async (show) => {
   if (!rejectReason) return
 
   try {
-    await api.put(`${API_URL}/admin/shows/${show._id}/reject`, {
-      adminNote: rejectReason
+    await api.put(`${API_URL}/shows/admin/${show._id}/reject`, {
+      adminNotes: rejectReason
     })
 
     toast.add({
@@ -919,6 +1320,195 @@ onMounted(async () => {
   font-size: 0.875rem;
 }
 
+.audio-status {
+  display: flex;
+  justify-content: center;
+}
+
+/* Audio Dialog Styles */
+.audio-dialog-content {
+  padding: 0.5rem 0;
+}
+
+.show-info-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.show-info-header h4 {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+  color: #1f2937;
+}
+
+.show-info-header .artist-name {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.current-audio-section {
+  margin-bottom: 1.5rem;
+}
+
+.audio-info-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.audio-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audio-icon i {
+  font-size: 1.5rem;
+  color: white;
+}
+
+.audio-details {
+  flex: 1;
+}
+
+.audio-filename {
+  display: block;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+  word-break: break-all;
+}
+
+.audio-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.audio-meta i {
+  margin-right: 0.25rem;
+}
+
+.audio-player-wrapper {
+  margin-bottom: 1rem;
+}
+
+.audio-player {
+  width: 100%;
+  height: 40px;
+}
+
+.audio-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.no-audio-section {
+  text-align: center;
+  padding: 2rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.no-audio-icon {
+  width: 64px;
+  height: 64px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.no-audio-icon i {
+  font-size: 2rem;
+  color: #9ca3af;
+}
+
+.no-audio-section p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.upload-section {
+  margin-top: 1rem;
+}
+
+.upload-section h5 {
+  margin: 0 0 0.5rem;
+  color: #1f2937;
+}
+
+.upload-hint {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.file-upload-wrapper {
+  margin-bottom: 1rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.select-file-button {
+  width: 100%;
+}
+
+.selected-file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #eff6ff;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.selected-file-info i {
+  color: #3b82f6;
+}
+
+.file-size {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.upload-button {
+  width: 100%;
+}
+
+.upload-progress {
+  text-align: center;
+  padding: 1rem;
+}
+
+.upload-progress p {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Form Styles */
 .dialog-content {
   padding: 1rem 0;
 }
