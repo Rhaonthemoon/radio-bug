@@ -162,6 +162,32 @@
           <small class="p-error" v-if="formErrors.showId">{{ formErrors.showId }}</small>
         </div>
 
+        <!-- Show Schedule Info (read-only, from selected show) -->
+        <div v-if="selectedShowSchedule" class="schedule-info-box">
+          <div class="schedule-header">
+            <i class="pi pi-calendar"></i>
+            <span>Show Schedule</span>
+          </div>
+          <div class="schedule-details">
+            <div class="schedule-item">
+              <strong>Day:</strong>
+              <Tag :value="selectedShowSchedule.dayOfWeek" severity="info" />
+            </div>
+            <div class="schedule-item" v-if="selectedShowSchedule.timeSlot">
+              <strong>Time:</strong>
+              <span>{{ selectedShowSchedule.timeSlot }}</span>
+            </div>
+            <div class="schedule-item" v-if="selectedShowSchedule.frequency">
+              <strong>Frequency:</strong>
+              <Tag :value="formatFrequency(selectedShowSchedule.frequency)" severity="secondary" />
+            </div>
+          </div>
+        </div>
+
+        <Message v-else-if="episodeForm.showId && !selectedShowSchedule" severity="warn" :closable="false">
+          <small>This show doesn't have a schedule configured yet.</small>
+        </Message>
+
         <div class="form-group">
           <label>Title *</label>
           <InputText v-model="episodeForm.title" placeholder="Episode title"
@@ -176,10 +202,15 @@
         </div>
 
         <div class="form-group">
-          <label>Air Date *</label>
+          <label>Air Date & Time *</label>
           <Calendar v-model="episodeForm.airDate" dateFormat="yy-mm-dd" showIcon showTime
                     hourFormat="24" :class="{ 'p-invalid': formErrors.airDate }" class="w-full"/>
           <small class="p-error" v-if="formErrors.airDate">{{ formErrors.airDate }}</small>
+          <div v-if="suggestedAirDate" class="suggested-date">
+            <i class="pi pi-lightbulb"></i>
+            <span>Suggested: <strong>{{ formatDateTime(suggestedAirDate) }}</strong></span>
+            <Button label="Use" size="small" text @click="episodeForm.airDate = suggestedAirDate" />
+          </div>
         </div>
 
         <div class="form-group">
@@ -359,6 +390,61 @@ const statusOptions = [
   {label: 'Archived', value: 'archived'}
 ]
 
+// Computed - Get schedule from selected show
+const selectedShowSchedule = computed(() => {
+  if (!episodeForm.value.showId) return null
+  const show = shows.value.find(s => s._id === episodeForm.value.showId)
+  if (!show?.schedule?.dayOfWeek) return null
+  return show.schedule
+})
+
+// Computed - Suggest next air date based on show schedule (includes time)
+const suggestedAirDate = computed(() => {
+  if (!selectedShowSchedule.value?.dayOfWeek) return null
+
+  const dayMap = {
+    'Sunday': 0,
+    'Monday': 1,
+    'Tuesday': 2,
+    'Wednesday': 3,
+    'Thursday': 4,
+    'Friday': 5,
+    'Saturday': 6
+  }
+
+  const targetDay = dayMap[selectedShowSchedule.value.dayOfWeek]
+  if (targetDay === undefined) return null
+
+  const today = new Date()
+  const currentDay = today.getDay()
+  let daysUntilTarget = targetDay - currentDay
+
+  if (daysUntilTarget <= 0) {
+    daysUntilTarget += 7
+  }
+
+  const nextDate = new Date(today)
+  nextDate.setDate(today.getDate() + daysUntilTarget)
+
+  // Parse time from timeSlot (e.g., "20:00 - 22:00" or "20:00")
+  const timeSlot = selectedShowSchedule.value.timeSlot
+  if (timeSlot) {
+    const timeMatch = timeSlot.match(/(\d{1,2}):(\d{2})/)
+    if (timeMatch) {
+      const hours = parseInt(timeMatch[1], 10)
+      const minutes = parseInt(timeMatch[2], 10)
+      nextDate.setHours(hours, minutes, 0, 0)
+    } else {
+      nextDate.setHours(0, 0, 0, 0)
+    }
+  } else {
+    nextDate.setHours(0, 0, 0, 0)
+  }
+
+  return nextDate
+})
+
+// Computed
 const filteredEpisodes = computed(() => {
   let result = episodes.value
   if (searchQuery.value) {
@@ -719,6 +805,15 @@ const formatDateTime = (d) => d ? new Date(d).toLocaleDateString('en-US', {
   hour: '2-digit',
   minute: '2-digit'
 }) : '-'
+const formatFrequency = (frequency) => {
+  const map = {
+    'weekly': 'Weekly',
+    'biweekly': 'Bi-weekly',
+    'monthly': 'Monthly',
+    'onetime': 'One-time'
+  }
+  return map[frequency] || frequency
+}
 const getStatusLabel = (s) => ({
   draft: 'DRAFT',
   published: 'PUBLISHED',
@@ -854,6 +949,60 @@ onMounted(async () => {
 
 .form-section h4 {
   margin: 0 0 1rem;
+}
+
+/* Schedule Info Box */
+.schedule-info-box {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.schedule-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.schedule-header i {
+  color: #3b82f6;
+}
+
+.schedule-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.schedule-item strong {
+  color: #374151;
+}
+
+.suggested-date {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #fef9c3;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.suggested-date i {
+  color: #f59e0b;
 }
 
 .upload-section {

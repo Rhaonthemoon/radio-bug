@@ -190,6 +190,7 @@ const handleLogout = () => {
   position: fixed;
   height: 100vh;
   overflow-y: auto;
+  z-index: 10000;
 }
 
 .sidebar-header {
