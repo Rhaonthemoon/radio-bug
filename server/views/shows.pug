@@ -1,55 +1,46 @@
 extends layout
 
 block content
-  section.page-header
-    h1.page-title
-      span.title-box.coral SHOWS
+    section.shows-page-new
+        .shows-layout
+            //- Left side - Big title with blob
+            .shows-title-section
+                .shows-blob
+                    span.blob-text ALL
+                    span.blob-text THE
+                    span.blob-text SH
+                    span.blob-text OW
+                .live-stream-badge
+                    .live-icon
+                        span.broadcast-waves
+                        span.play-triangle ▶
+                    span.live-text LIVE
+                    span.stream-text STREAM
 
-  section.shows-page
-    if shows && shows.length
-      .shows-list-full
-        each show in shows
-          article.show-card-full(x-data="{ open: false, episodes: [], loaded: false }")
-            .show-header(@click="open = !open; if (!loaded) { fetch(`/api/shows/${show._id}/episodes`).then(r => r.json()).then(data => { episodes = data; loaded = true; }); }")
-              .show-image
-                if show.image && show.image.url
-                  img(src=show.image.url alt=show.image.alt || show.title)
+            //- Right side - Episodes list
+            .shows-content-section
+                if shows && shows.length
+                    ul.episodes-bullet-list
+                        each show in shows
+                            if show.episodes && show.episodes.length
+                                each episode in show.episodes.slice(0, 15)
+                                    li
+                                        a(href=`/episodes/${episode._id || episode.slug}`)
+                                            span.episode-name= episode.title
+                                            |  -
+                                            span.artist-name= show.artist && show.artist.name ? show.artist.name : show.title
+                            else
+                                li
+                                    a(href=`/shows/${show.slug}`)
+                                        span.episode-name= show.title
+                                        if show.artist && show.artist.name
+                                            |  -
+                                            span.artist-name= show.artist.name
                 else
-                  .placeholder-image
-              
-              .show-info
-                h2.show-title= show.title
-                if show.artist && show.artist.name
-                  p.show-artist= show.artist.name
-                if show.description
-                  p.show-description= show.description.substring(0, 150) + (show.description.length > 150 ? '...' : '')
-                if show.genres && show.genres.length
-                  .show-genres
-                    each genre in show.genres
-                      span.genre-tag= genre
-              
-              .show-toggle
-                span.toggle-icon(x-text="open ? '−' : '+'")
-            
-            //- Accordion episodi
-            .show-episodes(x-show="open" x-transition)
-              .episodes-header
-                h3 Latest Episodes
-                a.view-all(href=`/shows/${show.slug}`) View all →
-              
-              template(x-if="loaded && episodes.length")
-                ul.episodes-accordion
-                  template(x-for="episode in episodes" :key="episode._id")
-                    li.episode-row
-                      a.episode-link(:href="`/episodes/${episode._id}`")
-                        span.episode-title(x-text="episode.title")
-                        span.episode-date(x-text="new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })")
-              
-              template(x-if="loaded && !episodes.length")
-                p.no-episodes No episodes yet
-              
-              template(x-if="!loaded")
-                p.loading Loading...
-    else
-      .no-content
-        p No shows available yet
+                    .no-content
+                        p No shows available yet
+
+        //- Join community section
+        section.join-community
+            h2 JOIN OUR COMMUNITY
+            a.submit-link(href="/open-call") SUBMIT YOUR SHOW

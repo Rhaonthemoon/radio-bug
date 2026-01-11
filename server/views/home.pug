@@ -1,6 +1,43 @@
 extends layout
 
 block content
+    .container(style="max-width: 480px;")
+        .player(x-data="radioPlayer()" x-init="init()")
+            .player-controls
+                audio#player-audio(
+                    x-ref="audio"
+                    :src="streamUrl"
+                    preload="none"
+                    crossorigin="anonymous"
+                )
+                button.btn-play(@click="togglePlay()")
+                    i.fa-solid.fa-play(x-show="!playing")
+                    i.fa-solid.fa-pause(x-show="playing")
+            #visualizer.audio-visualizer
+            .player-status
+                .live-indicator(:class="isLive ? 'on-air' : 'offline'")
+                    span(x-text="isLive ? 'ON AIR' : 'OFF'")
+                    i.fa-regular.fa-circle-dot(:style="{ color: isLive ? '#e53935' : '#333' }")
+
+        //- Now Playing Metadata
+        .now-playing(x-show="isLive")
+            template(x-if="currentTrack.title")
+                .now-playing-content
+                    .now-playing-label NOW PLAYING
+                    .track-info
+                        span.track-title(x-text="currentTrack.title")
+                        template(x-if="currentTrack.artist")
+                            span.track-artist
+                                | —
+                                span(x-text="currentTrack.artist")
+                    template(x-if="currentShow")
+                        .show-name(x-text="currentShow")
+            template(x-if="!currentTrack.title && isLive")
+                .metadata-loading Loading...
+
+
+
+
     section.hero
         .about-preview
             h2.section-title

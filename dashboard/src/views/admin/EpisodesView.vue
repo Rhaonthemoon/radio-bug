@@ -793,9 +793,19 @@ const getImageUrl = (ep) => {
 }
 const getAudioUrl = (id) => {
   const ep = episodes.value.find(e => e._id === id) || previewEpisode.value
-  if (!ep?.audioFile?.storedFilename) return null
-  const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
-  return `${base}/uploads/episodes/${ep.audioFile.storedFilename}`
+
+  // Se c'è URL Cloudinary, usalo direttamente
+  if (ep?.audioFile?.url) {
+    return ep.audioFile.url
+  }
+
+  // Fallback per vecchi file locali (retrocompatibilità)
+  if (ep?.audioFile?.storedFilename) {
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
+    return `${base}/uploads/episodes/${ep.audioFile.storedFilename}`
+  }
+
+  return null
 }
 const formatFileSize = (bytes) => bytes ? `${(bytes / 1024 / 1024).toFixed(2)} MB` : '-'
 const formatDateTime = (d) => d ? new Date(d).toLocaleDateString('en-US', {
