@@ -22,13 +22,15 @@ const ShowSchema = new mongoose.Schema({
         url: { type: String, required: true },
         alt: String
     },
-    // Audio promozionale/jingle dello show
+    // Audio promozionale/jingle dello show (Cloudinary)
     audio: {
         filename: { type: String, default: null },
         originalName: { type: String, default: null },
         url: { type: String, default: null },
+        cloudinaryId: { type: String, default: null }, // ID per eliminazione da Cloudinary
         duration: { type: Number, default: null }, // durata in secondi
         bitrate: { type: Number, default: null },
+        size: { type: Number, default: null }, // dimensione in bytes
         uploadedAt: { type: Date, default: null }
     },
     genres: [String],

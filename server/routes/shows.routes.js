@@ -3,11 +3,21 @@ const router = express.Router();
 const Show = require('../models/Shows');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { sendShowApprovedEmail, sendShowRejectedEmail } = require('../config/email');
-const {
-    uploadShowAudio,
-    validateShowAudioBitrate,
-    deleteShowAudioFile
-} = require('../middleware/uploadMiddleware');
+const cloudinary = require('../config/cloudinary');
+const multer = require('multer');
+
+// Multer per gestire file in memoria (poi va su Cloudinary)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'audio/mpeg' || file.mimetype === 'audio/mp3') {
+            cb(null, true);
+        } else {
+            cb(new Error('Solo file MP3 sono accettati'), false);
+        }
+    }
+});
 
 // ==================== ROTTE PUBBLICHE ====================
 
@@ -32,7 +42,6 @@ router.get('/slug/:slug', async (req, res) => {
 /**
  * GET /api/shows
  * Lista tutti gli show con filtri opzionali
- * ACCESSIBILE A: Admin (tutti) e Artist (solo i propri)
  */
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -43,7 +52,6 @@ router.get('/', authMiddleware, async (req, res) => {
         if (featured) filter.featured = featured === 'true';
         if (genre) filter.genres = genre;
 
-        // Se artista, filtra solo i suoi show
         if (req.user.role === 'artist') {
             filter.createdBy = req.user._id;
         }
@@ -61,7 +69,6 @@ router.get('/', authMiddleware, async (req, res) => {
 /**
  * GET /api/shows/:id
  * Ottieni singolo show per ID
- * ACCESSIBILE A: Admin (tutti) e Artist (solo propri)
  */
 router.get('/:id', authMiddleware, async (req, res) => {
     try {
@@ -72,7 +79,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Show non trovato' });
         }
 
-        // Se artista, verifica che sia il suo show
         if (req.user.role === 'artist' && show.createdBy._id.toString() !== req.user._id.toString()) {
             return res.status(403).json({ error: 'Non autorizzato' });
         }
@@ -91,7 +97,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
  */
 router.post('/artist/request', authMiddleware, async (req, res) => {
     try {
-        // Verifica che sia un artista
         if (req.user.role !== 'artist') {
             return res.status(403).json({ error: 'Solo gli artisti possono richiedere show' });
         }
@@ -114,7 +119,6 @@ router.post('/artist/request', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/shows/artist/my-shows
- * Artista ottiene TUTTI i propri show (tutti gli stati)
  */
 router.get('/artist/my-shows', authMiddleware, async (req, res) => {
     try {
@@ -133,7 +137,6 @@ router.get('/artist/my-shows', authMiddleware, async (req, res) => {
 
 /**
  * GET /api/shows/artist/approved
- * Artista ottiene SOLO i propri show APPROVATI (per creare episodi)
  */
 router.get('/artist/approved', authMiddleware, async (req, res) => {
     try {
@@ -155,26 +158,20 @@ router.get('/artist/approved', authMiddleware, async (req, res) => {
     }
 });
 
-// ==================== ROTTE AUDIO SHOW ====================
+// ==================== UPLOAD AUDIO CON CLOUDINARY ====================
 
 /**
  * POST /api/shows/:id/audio
- * Upload audio per uno show (jingle/intro)
- * ACCESSIBILE A: Admin (tutti) e Artist (solo propri show approvati)
+ * Upload audio per uno show su Cloudinary
  */
 router.post('/:id/audio',
     authMiddleware,
-    uploadShowAudio.single('audio'),
-    validateShowAudioBitrate,
+    upload.single('audio'),
     async (req, res) => {
         try {
             const show = await Show.findById(req.params.id);
 
             if (!show) {
-                // Elimina il file caricato se lo show non esiste
-                if (req.file) {
-                    deleteShowAudioFile(req.file.filename);
-                }
                 return res.status(404).json({ error: 'Show non trovato' });
             }
 
@@ -183,65 +180,88 @@ router.post('/:id/audio',
             const isOwner = show.createdBy.toString() === req.user._id.toString();
 
             if (!isAdmin && !isOwner) {
-                if (req.file) {
-                    deleteShowAudioFile(req.file.filename);
-                }
                 return res.status(403).json({ error: 'Non autorizzato' });
             }
 
-            // Se artista, verifica che lo show sia approvato
-            if (!isAdmin && show.requestStatus !== 'approved') {
-                if (req.file) {
-                    deleteShowAudioFile(req.file.filename);
-                }
+            if (!isAdmin && show.requestStatus === 'rejected') {
                 return res.status(403).json({
-                    error: 'Puoi caricare audio solo per show approvati'
+                    error: 'Non puoi caricare audio per show rifiutati'
                 });
             }
 
-            // Se esiste già un audio, elimina il vecchio file
-            if (show.audio && show.audio.filename) {
-                deleteShowAudioFile(show.audio.filename);
-                console.log(`✔ Vecchio audio eliminato: ${show.audio.filename}`);
+            if (!req.file) {
+                return res.status(400).json({ error: 'Nessun file caricato' });
             }
 
-            // Aggiorna lo show con i dati del nuovo audio
-            const audioUrl = `/uploads/shows/audio/${req.file.filename}`;
+            console.log(`📤 Upload audio su Cloudinary per show "${show.title}"...`);
 
+            // Elimina vecchio audio da Cloudinary se esiste
+            if (show.audio && show.audio.cloudinaryId) {
+                try {
+                    await cloudinary.uploader.destroy(show.audio.cloudinaryId, {
+                        resource_type: 'video' // Cloudinary usa 'video' per audio
+                    });
+                    console.log(`✔ Vecchio audio eliminato da Cloudinary`);
+                } catch (err) {
+                    console.warn('Errore eliminazione vecchio audio:', err.message);
+                }
+            }
+
+            // Salva temporaneamente il file per upload chunked
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+
+            const tempPath = path.join(os.tmpdir(), `upload_${Date.now()}.mp3`);
+            fs.writeFileSync(tempPath, req.file.buffer);
+
+            console.log(`📤 Upload file temporaneo: ${tempPath} (${req.file.size} bytes)`);
+
+            // Upload su Cloudinary con chunked upload per file grandi
+            const uploadResult = await cloudinary.uploader.upload(tempPath, {
+                resource_type: 'video',
+                folder: 'bug-radio/shows',
+                public_id: `show_${show._id}_${Date.now()}`,
+                chunk_size: 6000000 // 6MB chunks
+            });
+
+            // Elimina file temporaneo
+            fs.unlinkSync(tempPath);
+
+            console.log(`✔ Upload completato: ${uploadResult.secure_url}`);
+
+            // Aggiorna show con dati audio
             show.audio = {
-                filename: req.file.filename,
+                filename: req.file.originalname,
                 originalName: req.file.originalname,
-                url: audioUrl,
-                duration: req.audioMetadata.duration,
-                bitrate: req.audioMetadata.bitrate,
+                url: uploadResult.secure_url,
+                cloudinaryId: uploadResult.public_id,
+                duration: Math.round(uploadResult.duration || 0),
+                bitrate: uploadResult.bit_rate ? Math.round(uploadResult.bit_rate / 1000) : null,
+                size: uploadResult.bytes,
                 uploadedAt: new Date()
             };
 
             await show.save();
 
-            console.log(`✔ Audio caricato per show "${show.title}": ${req.file.filename}`);
-
             res.json({
                 message: 'Audio caricato con successo',
                 audio: show.audio
             });
+
         } catch (error) {
-            console.error('Errore upload audio show:', error);
-
-            // Elimina il file in caso di errore
-            if (req.file) {
-                deleteShowAudioFile(req.file.filename);
-            }
-
-            res.status(500).json({ error: 'Errore nel caricamento dell\'audio' });
+            console.error('❌ Errore upload audio Cloudinary:', error);
+            res.status(500).json({
+                error: 'Errore nel caricamento dell\'audio',
+                details: error.message
+            });
         }
     }
 );
 
 /**
  * DELETE /api/shows/:id/audio
- * Elimina audio di uno show
- * ACCESSIBILE A: Admin (tutti) e Artist (solo propri show)
+ * Elimina audio di uno show da Cloudinary
  */
 router.delete('/:id/audio', authMiddleware, async (req, res) => {
     try {
@@ -251,7 +271,6 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Show non trovato' });
         }
 
-        // Verifica permessi
         const isAdmin = req.user.role === 'admin';
         const isOwner = show.createdBy.toString() === req.user._id.toString();
 
@@ -259,40 +278,42 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
             return res.status(403).json({ error: 'Non autorizzato' });
         }
 
-        // Verifica che esista un audio da eliminare
-        if (!show.audio || !show.audio.filename) {
+        if (!show.audio || !show.audio.cloudinaryId) {
             return res.status(404).json({ error: 'Nessun audio da eliminare' });
         }
 
-        // Elimina il file fisico
-        const deleted = deleteShowAudioFile(show.audio.filename);
-
-        if (!deleted) {
-            console.warn(`⚠ File audio non trovato: ${show.audio.filename}`);
+        // Elimina da Cloudinary
+        try {
+            await cloudinary.uploader.destroy(show.audio.cloudinaryId, {
+                resource_type: 'video'
+            });
+            console.log(`✔ Audio eliminato da Cloudinary: ${show.audio.cloudinaryId}`);
+        } catch (err) {
+            console.warn('Errore eliminazione Cloudinary:', err.message);
         }
 
-        // Rimuovi i dati audio dallo show
+        // Rimuovi dati audio dallo show
         show.audio = {
             filename: null,
             originalName: null,
             url: null,
+            cloudinaryId: null,
             duration: null,
             bitrate: null,
+            size: null,
             uploadedAt: null
         };
 
         await show.save();
 
-        console.log(`✔ Audio eliminato per show "${show.title}"`);
-
         res.json({ message: 'Audio eliminato con successo' });
     } catch (error) {
-        console.error('Errore eliminazione audio show:', error);
+        console.error('Errore eliminazione audio:', error);
         res.status(500).json({ error: 'Errore nell\'eliminazione dell\'audio' });
     }
 });
 
-// ==================== ROTTE ADMIN - GESTIONE COMPLETA ====================
+// ==================== ROTTE ADMIN ====================
 
 /**
  * POST /api/shows
@@ -350,10 +371,16 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Show non trovato' });
         }
 
-        // Elimina l'audio associato se esiste
-        if (show.audio && show.audio.filename) {
-            deleteShowAudioFile(show.audio.filename);
-            console.log(`✔ Audio eliminato insieme allo show: ${show.audio.filename}`);
+        // Elimina audio da Cloudinary se esiste
+        if (show.audio && show.audio.cloudinaryId) {
+            try {
+                await cloudinary.uploader.destroy(show.audio.cloudinaryId, {
+                    resource_type: 'video'
+                });
+                console.log(`✔ Audio eliminato da Cloudinary insieme allo show`);
+            } catch (err) {
+                console.warn('Errore eliminazione audio Cloudinary:', err.message);
+            }
         }
 
         await Show.findByIdAndDelete(req.params.id);
@@ -365,11 +392,10 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     }
 });
 
-// ==================== ROTTE ADMIN - GESTIONE RICHIESTE ====================
+// ==================== GESTIONE RICHIESTE ====================
 
 /**
  * GET /api/shows/admin/requests
- * Admin: lista richieste pending
  */
 router.get('/admin/requests', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -385,7 +411,6 @@ router.get('/admin/requests', authMiddleware, adminMiddleware, async (req, res) 
 
 /**
  * PUT /api/shows/admin/:id/approve
- * Admin: approva richiesta show + invia email all'artista
  */
 router.put('/admin/:id/approve', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -406,7 +431,6 @@ router.put('/admin/:id/approve', authMiddleware, adminMiddleware, async (req, re
             return res.status(404).json({ error: 'Show non trovato' });
         }
 
-        // Invia email di notifica all'artista
         try {
             await sendShowApprovedEmail(
                 show.createdBy.email,
@@ -418,7 +442,6 @@ router.put('/admin/:id/approve', authMiddleware, adminMiddleware, async (req, re
             console.log('✅ Email approvazione inviata a:', show.createdBy.email);
         } catch (emailError) {
             console.error('❌ Errore invio email approvazione:', emailError);
-            // Non bloccare l'approvazione se l'email fallisce
         }
 
         res.json(show);
@@ -430,7 +453,6 @@ router.put('/admin/:id/approve', authMiddleware, adminMiddleware, async (req, re
 
 /**
  * PUT /api/shows/admin/:id/reject
- * Admin: rifiuta richiesta show + invia email all'artista
  */
 router.put('/admin/:id/reject', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -454,7 +476,6 @@ router.put('/admin/:id/reject', authMiddleware, adminMiddleware, async (req, res
             return res.status(404).json({ error: 'Show non trovato' });
         }
 
-        // Invia email di notifica all'artista
         try {
             await sendShowRejectedEmail(
                 show.createdBy.email,
@@ -465,7 +486,6 @@ router.put('/admin/:id/reject', authMiddleware, adminMiddleware, async (req, res
             console.log('✅ Email rifiuto inviata a:', show.createdBy.email);
         } catch (emailError) {
             console.error('❌ Errore invio email rifiuto:', emailError);
-            // Non bloccare il rifiuto se l'email fallisce
         }
 
         res.json(show);

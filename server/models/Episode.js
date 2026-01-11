@@ -33,15 +33,17 @@ const episodeSchema = new mongoose.Schema({
         default: false
     },
 
-    // ✅ Campo per file audio locale
+    // File audio (Cloudinary)
     audioFile: {
-        filename: String,          // nome originale del file
-        storedFilename: String,    // nome file salvato su disco
-        path: String,              // percorso completo
-        size: Number,              // dimensione in bytes
-        mimetype: String,          // tipo MIME
-        bitrate: Number,           // bitrate in kbps (es. 320)
-        duration: Number,          // durata in secondi
+        filename: String,           // nome originale del file
+        storedFilename: String,     // public_id su Cloudinary
+        url: String,                // URL Cloudinary (secure_url)
+        cloudinaryId: String,       // ID per eliminazione
+        path: String,               // deprecato - per retrocompatibilità
+        size: Number,               // dimensione in bytes
+        mimetype: String,           // tipo MIME
+        bitrate: Number,            // bitrate in kbps (es. 320)
+        duration: Number,           // durata in secondi
         uploadedAt: Date,
         exists: {
             type: Boolean,
@@ -49,33 +51,20 @@ const episodeSchema = new mongoose.Schema({
         }
     },
 
-    // ✅ Campo per immagine episodio
+    // Immagine episodio (Cloudinary)
     image: {
-        filename: String,          // nome originale del file
-        storedFilename: String,    // nome file salvato su disco
-        path: String,              // percorso completo
-        size: Number,              // dimensione in bytes
-        mimetype: String,          // tipo MIME (image/jpeg, image/png, etc.)
+        filename: String,
+        storedFilename: String,
+        url: String,
+        cloudinaryId: String,
+        path: String,               // deprecato
+        size: Number,
+        mimetype: String,
         uploadedAt: Date,
         exists: {
             type: Boolean,
             default: false
         }
-    },
-
-    // ✅ Mixcloud integration
-    mixcloud: {
-        status: {
-            type: String,
-            enum: ['uploading', 'uploaded', 'failed', null],
-            default: null
-        },
-        key: {
-            type: String,           // es: '/OnAirOnSite/episode-slug/'
-            trim: true
-        },
-        uploadedAt: Date,
-        error: String               // messaggio errore se fallito
     },
 
     // Link esterni (opzionali)
@@ -113,6 +102,18 @@ const episodeSchema = new mongoose.Schema({
                 message: 'Invalid Spotify URL'
             }
         }
+    },
+
+    // Mixcloud integration
+    mixcloud: {
+        status: {
+            type: String,
+            enum: ['pending', 'uploading', 'uploaded', 'failed'],
+            default: 'pending'
+        },
+        key: String,
+        uploadedAt: Date,
+        error: String
     },
 
     // Metadati
