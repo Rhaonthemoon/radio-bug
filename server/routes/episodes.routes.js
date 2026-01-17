@@ -3,11 +3,12 @@ const router = express.Router();
 const Episode = require('../models/Episode');
 const Show = require('../models/Shows');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const cloudinary = require('../config/cloudinary');
+const { b2, B2_BUCKET, B2_BASE_URL } = require('../config/backblaze');
 const multer = require('multer');
+const musicMetadata = require('music-metadata');
 const { uploadToMixcloud, getMixcloudEmbedUrl } = require('../services/mixcloudService');
 
-// Multer per gestire file in memoria (poi vanno su Cloudinary)
+// Multer per gestire file in memoria
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
@@ -33,7 +34,34 @@ const uploadImage = multer({
     }
 });
 
-// ==================== HELPER FUNCTIONS ====================
+// ==================== HELPER: B2 Functions ====================
+
+const uploadToB2 = async (buffer, filename, contentType = 'audio/mpeg') => {
+    const params = {
+        Bucket: B2_BUCKET,
+        Key: filename,
+        Body: buffer,
+        ContentType: contentType
+    };
+
+    const result = await b2.upload(params).promise();
+    return {
+        key: filename,
+        url: `${B2_BASE_URL}/${filename}`,
+        etag: result.ETag
+    };
+};
+
+const deleteFromB2 = async (filename) => {
+    const params = {
+        Bucket: B2_BUCKET,
+        Key: filename
+    };
+
+    await b2.deleteObject(params).promise();
+};
+
+// ==================== HELPER: Permission Functions ====================
 
 const canManageEpisode = async (userId, userRole, episodeId) => {
     if (userRole === 'admin') return true;
@@ -63,7 +91,7 @@ const canCreateEpisodeForShow = async (userId, userRole, showId) => {
         if (show.requestStatus !== 'approved') {
             return {
                 allowed: false,
-                reason: `Lo show deve essere approvato dall'admin prima di poter creare episodi. Stato attuale: ${show.requestStatus}`
+                reason: `Lo show deve essere approvato prima di poter creare episodi. Stato attuale: ${show.requestStatus}`
             };
         }
 
@@ -97,7 +125,7 @@ router.get('/public/show/:showSlug', async (req, res) => {
             status: 'published'
         })
             .sort({ airDate: -1 })
-            .select('-audioFile.cloudinaryId -image.cloudinaryId');
+            .select('-audioFile.b2Key -image.b2Key');
 
         res.json(episodes);
     } catch (error) {
@@ -107,7 +135,6 @@ router.get('/public/show/:showSlug', async (req, res) => {
 
 /**
  * GET /api/episodes/public/:id/stream
- * Redirect a Cloudinary URL per streaming pubblico
  */
 router.get('/public/:id/stream', async (req, res) => {
     try {
@@ -125,7 +152,7 @@ router.get('/public/:id/stream', async (req, res) => {
         episode.stats.plays += 1;
         await episode.save();
 
-        // Redirect all'URL di Cloudinary
+        // Redirect all'URL di B2
         res.redirect(episode.audioFile.url);
     } catch (error) {
         console.error('Errore streaming:', error);
@@ -156,7 +183,7 @@ router.get('/', authMiddleware, async (req, res) => {
             .populate('createdBy', 'name email')
             .sort({ airDate: -1 });
 
-        // Verifica esistenza file (con Cloudinary basta controllare se c'è l'URL)
+        // Verifica esistenza file
         for (let episode of episodes) {
             if (episode.audioFile) {
                 episode.audioFile.exists = !!episode.audioFile.url;
@@ -168,6 +195,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
         res.json(episodes);
     } catch (error) {
+        console.error('❌ ERRORE GET EPISODES:', error);
         res.status(500).json({ error: 'Errore nel recupero degli episodi' });
     }
 });
@@ -187,11 +215,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
         if (req.user.role === 'artist') {
             if (episode.showId.createdBy.toString() !== req.user._id.toString()) {
-                return res.status(403).json({ error: 'Non autorizzato a visualizzare questo episodio' });
+                return res.status(403).json({ error: 'Non autorizzato' });
             }
         }
 
-        // Verifica esistenza file
         if (episode.audioFile) {
             episode.audioFile.exists = !!episode.audioFile.url;
         }
@@ -249,7 +276,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 
         const canManage = await canManageEpisode(req.user._id, req.user.role, req.params.id);
         if (!canManage) {
-            return res.status(403).json({ error: 'Non autorizzato a modificare questo episodio' });
+            return res.status(403).json({ error: 'Non autorizzato' });
         }
 
         Object.assign(episode, req.body, {
@@ -265,7 +292,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         res.json(episode);
     } catch (error) {
         console.error('Errore aggiornamento episodio:', error);
-        res.status(500).json({ error: 'Errore nell\'aggiornamento dell\'episodio' });
+        res.status(500).json({ error: 'Errore nell\'aggiornamento' });
     }
 });
 
@@ -282,28 +309,26 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 
         const canManage = await canManageEpisode(req.user._id, req.user.role, req.params.id);
         if (!canManage) {
-            return res.status(403).json({ error: 'Non autorizzato a eliminare questo episodio' });
+            return res.status(403).json({ error: 'Non autorizzato' });
         }
 
-        // Elimina audio da Cloudinary se esiste
-        if (episode.audioFile && episode.audioFile.cloudinaryId) {
+        // Elimina audio da B2
+        if (episode.audioFile && episode.audioFile.b2Key) {
             try {
-                await cloudinary.uploader.destroy(episode.audioFile.cloudinaryId, {
-                    resource_type: 'video'
-                });
-                console.log(`✔ Audio episodio eliminato da Cloudinary`);
+                await deleteFromB2(episode.audioFile.b2Key);
+                console.log(`✔ Audio eliminato da B2`);
             } catch (err) {
-                console.warn('Errore eliminazione audio Cloudinary:', err.message);
+                console.warn('Errore eliminazione audio B2:', err.message);
             }
         }
 
-        // Elimina immagine da Cloudinary se esiste
-        if (episode.image && episode.image.cloudinaryId) {
+        // Elimina immagine da B2
+        if (episode.image && episode.image.b2Key) {
             try {
-                await cloudinary.uploader.destroy(episode.image.cloudinaryId);
-                console.log(`✔ Immagine episodio eliminata da Cloudinary`);
+                await deleteFromB2(episode.image.b2Key);
+                console.log(`✔ Immagine eliminata da B2`);
             } catch (err) {
-                console.warn('Errore eliminazione immagine Cloudinary:', err.message);
+                console.warn('Errore eliminazione immagine B2:', err.message);
             }
         }
 
@@ -316,15 +341,14 @@ router.delete('/:id', authMiddleware, async (req, res) => {
         res.json({ message: 'Episodio eliminato con successo' });
     } catch (error) {
         console.error('Errore eliminazione episodio:', error);
-        res.status(500).json({ error: 'Errore nell\'eliminazione dell\'episodio' });
+        res.status(500).json({ error: 'Errore nell\'eliminazione' });
     }
 });
 
-// ==================== UPLOAD AUDIO SU CLOUDINARY ====================
+// ==================== UPLOAD AUDIO SU B2 ====================
 
 /**
  * POST /api/episodes/:id/upload
- * Upload file audio MP3 per un episodio su Cloudinary
  */
 router.post('/:id/upload',
     authMiddleware,
@@ -339,67 +363,54 @@ router.post('/:id/upload',
 
             const canManage = await canManageEpisode(req.user._id, req.user.role, req.params.id);
             if (!canManage) {
-                return res.status(403).json({ error: 'Non autorizzato a caricare audio per questo episodio' });
+                return res.status(403).json({ error: 'Non autorizzato' });
             }
 
             if (!req.file) {
                 return res.status(400).json({ error: 'Nessun file caricato' });
             }
 
-            console.log(`📤 Upload audio episodio su Cloudinary...`);
+            console.log(`📤 Upload audio episodio su B2...`);
 
-            // Elimina vecchio audio da Cloudinary se esiste
-            if (episode.audioFile && episode.audioFile.cloudinaryId) {
+            // Analizza metadata
+            const metadata = await musicMetadata.parseBuffer(req.file.buffer);
+            const duration = Math.round(metadata.format.duration || 0);
+            const bitrate = metadata.format.bitrate ? Math.round(metadata.format.bitrate / 1000) : null;
+
+            console.log(`✔ Durata: ${duration}s, Bitrate: ${bitrate}kbps`);
+
+            // Elimina vecchio audio da B2
+            if (episode.audioFile && episode.audioFile.b2Key) {
                 try {
-                    await cloudinary.uploader.destroy(episode.audioFile.cloudinaryId, {
-                        resource_type: 'video'
-                    });
-                    console.log(`✔ Vecchio audio eliminato da Cloudinary`);
+                    await deleteFromB2(episode.audioFile.b2Key);
+                    console.log(`✔ Vecchio audio eliminato da B2`);
                 } catch (err) {
                     console.warn('Errore eliminazione vecchio audio:', err.message);
                 }
             }
 
-            // Salva temporaneamente il file per upload chunked
-            const fs = require('fs');
-            const path = require('path');
-            const os = require('os');
+            // Upload su B2
+            const filename = `episodes/${episode._id}_${Date.now()}.mp3`;
+            const uploadResult = await uploadToB2(req.file.buffer, filename);
 
-            const tempPath = path.join(os.tmpdir(), `upload_${Date.now()}.mp3`);
-            fs.writeFileSync(tempPath, req.file.buffer);
+            console.log(`✔ Upload completato: ${uploadResult.url}`);
 
-            console.log(`📤 Upload file temporaneo: ${tempPath} (${req.file.size} bytes)`);
-
-            // Upload su Cloudinary con chunked upload per file grandi
-            const uploadResult = await cloudinary.uploader.upload(tempPath, {
-                resource_type: 'video',
-                folder: 'bug-radio/episodes',
-                public_id: `episode_${episode._id}_${Date.now()}`,
-                chunk_size: 6000000 // 6MB chunks
-            });
-
-            // Elimina file temporaneo
-            fs.unlinkSync(tempPath);
-
-            console.log(`✔ Upload completato: ${uploadResult.secure_url}`);
-
-            // Aggiorna episodio con dati audio
+            // Aggiorna episodio
             episode.audioFile = {
                 filename: req.file.originalname,
-                storedFilename: uploadResult.public_id,
-                url: uploadResult.secure_url,
-                cloudinaryId: uploadResult.public_id,
-                size: uploadResult.bytes,
+                storedFilename: uploadResult.key,
+                url: uploadResult.url,
+                b2Key: uploadResult.key,
+                size: req.file.size,
                 mimetype: 'audio/mpeg',
-                bitrate: uploadResult.bit_rate ? Math.round(uploadResult.bit_rate / 1000) : null,
-                duration: Math.round(uploadResult.duration || 0),
+                bitrate: bitrate,
+                duration: duration,
                 uploadedAt: new Date(),
                 exists: true
             };
 
-            // Aggiorna duration dell'episodio
-            if (!episode.duration && uploadResult.duration) {
-                episode.duration = Math.round(uploadResult.duration / 60);
+            if (!episode.duration && duration) {
+                episode.duration = Math.round(duration / 60);
             }
 
             await episode.save();
@@ -407,15 +418,11 @@ router.post('/:id/upload',
             res.json({
                 message: 'File audio caricato con successo',
                 episode: episode,
-                audioMetadata: {
-                    duration: uploadResult.duration,
-                    bitrate: uploadResult.bit_rate ? Math.round(uploadResult.bit_rate / 1000) : null,
-                    size: uploadResult.bytes
-                }
+                audioMetadata: { duration, bitrate, size: req.file.size }
             });
 
         } catch (error) {
-            console.error('❌ Errore upload audio Cloudinary:', error);
+            console.error('❌ Errore upload audio B2:', error);
             res.status(500).json({
                 error: 'Errore nel caricamento del file audio',
                 details: error.message
@@ -437,21 +444,19 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
 
         const canManage = await canManageEpisode(req.user._id, req.user.role, req.params.id);
         if (!canManage) {
-            return res.status(403).json({ error: 'Non autorizzato a eliminare l\'audio di questo episodio' });
+            return res.status(403).json({ error: 'Non autorizzato' });
         }
 
-        if (!episode.audioFile || !episode.audioFile.cloudinaryId) {
+        if (!episode.audioFile || !episode.audioFile.b2Key) {
             return res.status(404).json({ error: 'Nessun file audio da eliminare' });
         }
 
-        // Elimina da Cloudinary
+        // Elimina da B2
         try {
-            await cloudinary.uploader.destroy(episode.audioFile.cloudinaryId, {
-                resource_type: 'video'
-            });
-            console.log(`✔ Audio eliminato da Cloudinary: ${episode.audioFile.cloudinaryId}`);
+            await deleteFromB2(episode.audioFile.b2Key);
+            console.log(`✔ Audio eliminato da B2: ${episode.audioFile.b2Key}`);
         } catch (err) {
-            console.warn('Errore eliminazione Cloudinary:', err.message);
+            console.warn('Errore eliminazione B2:', err.message);
         }
 
         episode.audioFile = undefined;
@@ -461,13 +466,12 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
 
     } catch (error) {
         console.error('Errore eliminazione audio:', error);
-        res.status(500).json({ error: 'Errore nell\'eliminazione del file audio' });
+        res.status(500).json({ error: 'Errore nell\'eliminazione' });
     }
 });
 
 /**
  * GET /api/episodes/:id/stream
- * Stream audio protetto - redirect a Cloudinary
  */
 router.get('/:id/stream', authMiddleware, async (req, res) => {
     try {
@@ -487,7 +491,6 @@ router.get('/:id/stream', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'File audio non disponibile' });
         }
 
-        // Redirect all'URL di Cloudinary
         res.redirect(episode.audioFile.url);
     } catch (error) {
         console.error('Errore streaming:', error);
@@ -495,7 +498,7 @@ router.get('/:id/stream', authMiddleware, async (req, res) => {
     }
 });
 
-// ==================== UPLOAD IMAGE SU CLOUDINARY ====================
+// ==================== UPLOAD IMAGE SU B2 ====================
 
 /**
  * POST /api/episodes/:id/upload-image
@@ -513,52 +516,38 @@ router.post('/:id/upload-image',
 
             const canManage = await canManageEpisode(req.user._id, req.user.role, req.params.id);
             if (!canManage) {
-                return res.status(403).json({ error: 'Non autorizzato a caricare immagini per questo episodio' });
+                return res.status(403).json({ error: 'Non autorizzato' });
             }
 
             if (!req.file) {
                 return res.status(400).json({ error: 'Nessun file caricato' });
             }
 
-            console.log(`📤 Upload immagine episodio su Cloudinary...`);
+            console.log(`📤 Upload immagine episodio su B2...`);
 
-            // Elimina vecchia immagine da Cloudinary se esiste
-            if (episode.image && episode.image.cloudinaryId) {
+            // Elimina vecchia immagine da B2
+            if (episode.image && episode.image.b2Key) {
                 try {
-                    await cloudinary.uploader.destroy(episode.image.cloudinaryId);
-                    console.log(`✔ Vecchia immagine eliminata da Cloudinary`);
+                    await deleteFromB2(episode.image.b2Key);
+                    console.log(`✔ Vecchia immagine eliminata da B2`);
                 } catch (err) {
                     console.warn('Errore eliminazione vecchia immagine:', err.message);
                 }
             }
 
-            // Upload su Cloudinary
-            const uploadResult = await new Promise((resolve, reject) => {
-                const uploadStream = cloudinary.uploader.upload_stream(
-                    {
-                        folder: 'bug-radio/episodes/images',
-                        public_id: `episode_img_${episode._id}_${Date.now()}`,
-                        transformation: [
-                            { width: 1200, height: 1200, crop: 'limit' },
-                            { quality: 'auto' }
-                        ]
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                );
-                uploadStream.end(req.file.buffer);
-            });
+            // Upload su B2
+            const ext = req.file.originalname.split('.').pop();
+            const filename = `episodes/images/${episode._id}_${Date.now()}.${ext}`;
+            const uploadResult = await uploadToB2(req.file.buffer, filename, req.file.mimetype);
 
-            console.log(`✔ Immagine caricata: ${uploadResult.secure_url}`);
+            console.log(`✔ Immagine caricata: ${uploadResult.url}`);
 
             episode.image = {
                 filename: req.file.originalname,
-                storedFilename: uploadResult.public_id,
-                url: uploadResult.secure_url,
-                cloudinaryId: uploadResult.public_id,
-                size: uploadResult.bytes,
+                storedFilename: uploadResult.key,
+                url: uploadResult.url,
+                b2Key: uploadResult.key,
+                size: req.file.size,
                 mimetype: req.file.mimetype,
                 uploadedAt: new Date(),
                 exists: true
@@ -572,7 +561,7 @@ router.post('/:id/upload-image',
             });
 
         } catch (error) {
-            console.error('❌ Errore upload immagine Cloudinary:', error);
+            console.error('❌ Errore upload immagine B2:', error);
             res.status(500).json({
                 error: 'Errore nel caricamento dell\'immagine',
                 details: error.message
@@ -594,19 +583,18 @@ router.delete('/:id/image', authMiddleware, async (req, res) => {
 
         const canManage = await canManageEpisode(req.user._id, req.user.role, req.params.id);
         if (!canManage) {
-            return res.status(403).json({ error: 'Non autorizzato a eliminare l\'immagine di questo episodio' });
+            return res.status(403).json({ error: 'Non autorizzato' });
         }
 
-        if (!episode.image || !episode.image.cloudinaryId) {
+        if (!episode.image || !episode.image.b2Key) {
             return res.status(404).json({ error: 'Nessuna immagine da eliminare' });
         }
 
-        // Elimina da Cloudinary
         try {
-            await cloudinary.uploader.destroy(episode.image.cloudinaryId);
-            console.log(`✔ Immagine eliminata da Cloudinary: ${episode.image.cloudinaryId}`);
+            await deleteFromB2(episode.image.b2Key);
+            console.log(`✔ Immagine eliminata da B2: ${episode.image.b2Key}`);
         } catch (err) {
-            console.warn('Errore eliminazione Cloudinary:', err.message);
+            console.warn('Errore eliminazione B2:', err.message);
         }
 
         episode.image = undefined;
@@ -616,7 +604,7 @@ router.delete('/:id/image', authMiddleware, async (req, res) => {
 
     } catch (error) {
         console.error('Errore eliminazione immagine:', error);
-        res.status(500).json({ error: 'Errore nell\'eliminazione dell\'immagine' });
+        res.status(500).json({ error: 'Errore nell\'eliminazione' });
     }
 });
 
@@ -624,7 +612,6 @@ router.delete('/:id/image', authMiddleware, async (req, res) => {
 
 /**
  * POST /api/episodes/:id/publish-mixcloud
- * Pubblica episodio su Mixcloud (usa URL Cloudinary)
  */
 router.post('/:id/publish-mixcloud', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -660,7 +647,6 @@ router.post('/:id/publish-mixcloud', authMiddleware, adminMiddleware, async (req
         };
         await episode.save();
 
-        // Per Mixcloud, passiamo l'URL di Cloudinary invece del path locale
         const result = await uploadToMixcloud(episode, episode.showId);
 
         if (result.success) {

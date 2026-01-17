@@ -1,4 +1,5 @@
 extends layout
+include mixins
 
 block content
     section.show-detail
@@ -53,9 +54,9 @@ block content
                 span.title-box.yellow EPISODES
 
             if episodes && episodes.length
-                ul.episodes-full-list
+                .episodes-full-list
                     each episode in episodes
-                        li.episode-item
+                        .episode-item
                             .episode-info
                                 h3.episode-title
                                     a(href=`/episodes/${episode._id}`)= episode.title
@@ -64,22 +65,14 @@ block content
                                     p.episode-description= episode.description.substring(0, 200) + (episode.description.length > 200 ? '...' : '')
 
                             .episode-actions
-                                if episode.audioFile && episode.audioFile.exists
+                                //- Usa URL diretto se disponibile (B2/Cloudinary), altrimenti fallback locale
+                                if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
+                                    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
                                     button.btn-play-episode(
-                                        x-data="{ playing: false }"
-                                        @click=`
-                                              if (!window.episodeAudio) window.episodeAudio = new Audio();
-                                              if (playing) {
-                                                window.episodeAudio.pause();
-                                              } else {
-                                                window.episodeAudio.src = '/uploads/episodes/${episode.audioFile.storedFilename}';
-                                                window.episodeAudio.play();
-                                              }
-                                              playing = !playing;
-                    `
+                                        data-audio=audioUrl
+                                        aria-label="Play episode"
                                     )
-                                        span(x-show="!playing") ▶
-                                        span(x-show="playing") ⏸
+                                        span ▶
 
                                 if episode.externalLinks && episode.externalLinks.mixcloudUrl
                                     a.external-link(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Mixcloud
@@ -88,3 +81,29 @@ block content
 
         .back-link
             a(href="/shows") ← Back to all shows
+
+    //- Episode player script
+    script.
+        document.querySelectorAll('.btn-play-episode').forEach(btn => {
+            let isPlaying = false;
+            btn.addEventListener('click', function() {
+                const audioSrc = this.dataset.audio;
+                if (!window.episodeAudio) {
+                    window.episodeAudio = new Audio();
+                }
+
+                if (isPlaying && window.episodeAudio.src.includes(audioSrc)) {
+                    window.episodeAudio.pause();
+                    this.querySelector('span').textContent = '▶';
+                    isPlaying = false;
+                } else {
+                    // Stop any other playing audio
+                    document.querySelectorAll('.btn-play-episode span').forEach(s => s.textContent = '▶');
+
+                    window.episodeAudio.src = audioSrc;
+                    window.episodeAudio.play();
+                    this.querySelector('span').textContent = '⏸';
+                    isPlaying = true;
+                }
+            });
+        });

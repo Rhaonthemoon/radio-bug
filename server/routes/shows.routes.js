@@ -2,14 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Show = require('../models/Shows');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { sendShowApprovedEmail, sendShowRejectedEmail } = require('../config/email');
-const cloudinary = require('../config/cloudinary');
+const { sendShowApprovedEmail, sendShowRejectedEmail, sendNewShowRequestEmail } = require('../config/email');
+const { b2, B2_BUCKET, B2_BASE_URL } = require('../config/backblaze');
 const multer = require('multer');
+const musicMetadata = require('music-metadata');
 
-// Multer per gestire file in memoria (poi va su Cloudinary)
+// Multer per gestire file in memoria
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+    limits: { fileSize: 500 * 1024 * 1024 }, // 500MB - nessun limite pratico con B2!
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'audio/mpeg' || file.mimetype === 'audio/mp3') {
             cb(null, true);
@@ -19,11 +20,37 @@ const upload = multer({
     }
 });
 
+// ==================== HELPER: Upload to B2 ====================
+
+const uploadToB2 = async (buffer, filename, contentType = 'audio/mpeg') => {
+    const params = {
+        Bucket: B2_BUCKET,
+        Key: filename,
+        Body: buffer,
+        ContentType: contentType
+    };
+
+    const result = await b2.upload(params).promise();
+    return {
+        key: filename,
+        url: `${B2_BASE_URL}/${filename}`,
+        etag: result.ETag
+    };
+};
+
+const deleteFromB2 = async (filename) => {
+    const params = {
+        Bucket: B2_BUCKET,
+        Key: filename
+    };
+
+    await b2.deleteObject(params).promise();
+};
+
 // ==================== ROTTE PUBBLICHE ====================
 
 /**
  * GET /api/shows/slug/:slug
- * Ottieni show tramite slug (pubblico)
  */
 router.get('/slug/:slug', async (req, res) => {
     try {
@@ -41,7 +68,6 @@ router.get('/slug/:slug', async (req, res) => {
 
 /**
  * GET /api/shows
- * Lista tutti gli show con filtri opzionali
  */
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -62,13 +88,13 @@ router.get('/', authMiddleware, async (req, res) => {
 
         res.json(shows);
     } catch (error) {
+        console.error('❌ ERRORE GET SHOWS:', error);
         res.status(500).json({ error: 'Errore nel recupero degli show' });
     }
 });
 
 /**
  * GET /api/shows/:id
- * Ottieni singolo show per ID
  */
 router.get('/:id', authMiddleware, async (req, res) => {
     try {
@@ -93,7 +119,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
 /**
  * POST /api/shows/artist/request
- * Artista crea richiesta per nuovo show
  */
 router.post('/artist/request', authMiddleware, async (req, res) => {
     try {
@@ -110,6 +135,21 @@ router.post('/artist/request', authMiddleware, async (req, res) => {
         });
 
         await show.save();
+
+        // Invia notifica email all'admin
+        try {
+            await sendNewShowRequestEmail(
+                req.user.artistName || req.user.name,
+                req.user.email,
+                show.title,
+                show.description
+            );
+            console.log('✅ Email notifica nuova richiesta inviata');
+        } catch (emailError) {
+            console.error('❌ Errore invio email notifica:', emailError);
+            // Non bloccare la creazione dello show se l'email fallisce
+        }
+
         res.json(show);
     } catch (error) {
         console.error('Errore creazione richiesta:', error);
@@ -158,11 +198,11 @@ router.get('/artist/approved', authMiddleware, async (req, res) => {
     }
 });
 
-// ==================== UPLOAD AUDIO CON CLOUDINARY ====================
+// ==================== UPLOAD AUDIO CON BACKBLAZE B2 ====================
 
 /**
  * POST /api/shows/:id/audio
- * Upload audio per uno show su Cloudinary
+ * Upload audio per uno show su Backblaze B2
  */
 router.post('/:id/audio',
     authMiddleware,
@@ -193,52 +233,40 @@ router.post('/:id/audio',
                 return res.status(400).json({ error: 'Nessun file caricato' });
             }
 
-            console.log(`📤 Upload audio su Cloudinary per show "${show.title}"...`);
+            console.log(`📤 Upload audio su Backblaze B2 per show "${show.title}"...`);
 
-            // Elimina vecchio audio da Cloudinary se esiste
-            if (show.audio && show.audio.cloudinaryId) {
+            // Analizza metadata audio
+            const metadata = await musicMetadata.parseBuffer(req.file.buffer);
+            const duration = Math.round(metadata.format.duration || 0);
+            const bitrate = metadata.format.bitrate ? Math.round(metadata.format.bitrate / 1000) : null;
+
+            console.log(`✔ Durata: ${duration}s, Bitrate: ${bitrate}kbps`);
+
+            // Elimina vecchio audio da B2 se esiste
+            if (show.audio && show.audio.b2Key) {
                 try {
-                    await cloudinary.uploader.destroy(show.audio.cloudinaryId, {
-                        resource_type: 'video' // Cloudinary usa 'video' per audio
-                    });
-                    console.log(`✔ Vecchio audio eliminato da Cloudinary`);
+                    await deleteFromB2(show.audio.b2Key);
+                    console.log(`✔ Vecchio audio eliminato da B2`);
                 } catch (err) {
                     console.warn('Errore eliminazione vecchio audio:', err.message);
                 }
             }
 
-            // Salva temporaneamente il file per upload chunked
-            const fs = require('fs');
-            const path = require('path');
-            const os = require('os');
+            // Upload su B2
+            const filename = `shows/${show._id}_${Date.now()}.mp3`;
+            const uploadResult = await uploadToB2(req.file.buffer, filename);
 
-            const tempPath = path.join(os.tmpdir(), `upload_${Date.now()}.mp3`);
-            fs.writeFileSync(tempPath, req.file.buffer);
-
-            console.log(`📤 Upload file temporaneo: ${tempPath} (${req.file.size} bytes)`);
-
-            // Upload su Cloudinary con chunked upload per file grandi
-            const uploadResult = await cloudinary.uploader.upload(tempPath, {
-                resource_type: 'video',
-                folder: 'bug-radio/shows',
-                public_id: `show_${show._id}_${Date.now()}`,
-                chunk_size: 6000000 // 6MB chunks
-            });
-
-            // Elimina file temporaneo
-            fs.unlinkSync(tempPath);
-
-            console.log(`✔ Upload completato: ${uploadResult.secure_url}`);
+            console.log(`✔ Upload completato: ${uploadResult.url}`);
 
             // Aggiorna show con dati audio
             show.audio = {
                 filename: req.file.originalname,
                 originalName: req.file.originalname,
-                url: uploadResult.secure_url,
-                cloudinaryId: uploadResult.public_id,
-                duration: Math.round(uploadResult.duration || 0),
-                bitrate: uploadResult.bit_rate ? Math.round(uploadResult.bit_rate / 1000) : null,
-                size: uploadResult.bytes,
+                url: uploadResult.url,
+                b2Key: uploadResult.key,
+                duration: duration,
+                bitrate: bitrate,
+                size: req.file.size,
                 uploadedAt: new Date()
             };
 
@@ -250,7 +278,7 @@ router.post('/:id/audio',
             });
 
         } catch (error) {
-            console.error('❌ Errore upload audio Cloudinary:', error);
+            console.error('❌ Errore upload audio B2:', error);
             res.status(500).json({
                 error: 'Errore nel caricamento dell\'audio',
                 details: error.message
@@ -261,7 +289,6 @@ router.post('/:id/audio',
 
 /**
  * DELETE /api/shows/:id/audio
- * Elimina audio di uno show da Cloudinary
  */
 router.delete('/:id/audio', authMiddleware, async (req, res) => {
     try {
@@ -278,18 +305,16 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
             return res.status(403).json({ error: 'Non autorizzato' });
         }
 
-        if (!show.audio || !show.audio.cloudinaryId) {
+        if (!show.audio || !show.audio.b2Key) {
             return res.status(404).json({ error: 'Nessun audio da eliminare' });
         }
 
-        // Elimina da Cloudinary
+        // Elimina da B2
         try {
-            await cloudinary.uploader.destroy(show.audio.cloudinaryId, {
-                resource_type: 'video'
-            });
-            console.log(`✔ Audio eliminato da Cloudinary: ${show.audio.cloudinaryId}`);
+            await deleteFromB2(show.audio.b2Key);
+            console.log(`✔ Audio eliminato da B2: ${show.audio.b2Key}`);
         } catch (err) {
-            console.warn('Errore eliminazione Cloudinary:', err.message);
+            console.warn('Errore eliminazione B2:', err.message);
         }
 
         // Rimuovi dati audio dallo show
@@ -297,7 +322,7 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
             filename: null,
             originalName: null,
             url: null,
-            cloudinaryId: null,
+            b2Key: null,
             duration: null,
             bitrate: null,
             size: null,
@@ -317,7 +342,6 @@ router.delete('/:id/audio', authMiddleware, async (req, res) => {
 
 /**
  * POST /api/shows
- * Crea nuovo show (SOLO ADMIN)
  */
 router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -338,7 +362,6 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
 
 /**
  * PUT /api/shows/:id
- * Aggiorna show (SOLO ADMIN)
  */
 router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -361,7 +384,6 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
 
 /**
  * DELETE /api/shows/:id
- * Elimina show (SOLO ADMIN)
  */
 router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     try {
@@ -371,15 +393,13 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Show non trovato' });
         }
 
-        // Elimina audio da Cloudinary se esiste
-        if (show.audio && show.audio.cloudinaryId) {
+        // Elimina audio da B2 se esiste
+        if (show.audio && show.audio.b2Key) {
             try {
-                await cloudinary.uploader.destroy(show.audio.cloudinaryId, {
-                    resource_type: 'video'
-                });
-                console.log(`✔ Audio eliminato da Cloudinary insieme allo show`);
+                await deleteFromB2(show.audio.b2Key);
+                console.log(`✔ Audio eliminato da B2 insieme allo show`);
             } catch (err) {
-                console.warn('Errore eliminazione audio Cloudinary:', err.message);
+                console.warn('Errore eliminazione audio B2:', err.message);
             }
         }
 

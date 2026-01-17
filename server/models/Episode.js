@@ -33,12 +33,12 @@ const episodeSchema = new mongoose.Schema({
         default: false
     },
 
-    // File audio (Cloudinary)
+    // File audio (Backblaze B2)
     audioFile: {
         filename: String,           // nome originale del file
-        storedFilename: String,     // public_id su Cloudinary
-        url: String,                // URL Cloudinary (secure_url)
-        cloudinaryId: String,       // ID per eliminazione
+        storedFilename: String,     // key su B2
+        url: String,                // URL pubblico B2
+        b2Key: String,              // Key per eliminazione
         path: String,               // deprecato - per retrocompatibilità
         size: Number,               // dimensione in bytes
         mimetype: String,           // tipo MIME
@@ -51,12 +51,12 @@ const episodeSchema = new mongoose.Schema({
         }
     },
 
-    // Immagine episodio (Cloudinary)
+    // Immagine episodio (Backblaze B2)
     image: {
         filename: String,
         storedFilename: String,
         url: String,
-        cloudinaryId: String,
+        b2Key: String,
         path: String,               // deprecato
         size: Number,
         mimetype: String,

@@ -1,4 +1,5 @@
 extends layout
+include mixins
 
 block content
     section.schedule-page
@@ -43,25 +44,15 @@ block content
                                     if dayInfo.hasEpisodes
                                         span.episode-dot= dayInfo.episodeCount
 
-            //- Lista episodi per giorno
+            //- Lista episodi per giorno con CARD
             .schedule-list-section
                 if scheduleByDay && scheduleByDay.length
                     each dayGroup in scheduleByDay
                         .schedule-day-block(id=`day-${dayGroup.dateKey}`)
                             h3.schedule-date= dayGroup.displayDate
-                            ul.schedule-list
+                            .schedule-list
                                 each episode in dayGroup.episodes
-                                    li.schedule-item
-                                        span.time= episode.time
-                                        .schedule-item-content
-                                            if episode.showSlug
-                                                a.episode-title(href=`/shows/${episode.showSlug}`)= episode.title
-                                            else
-                                                span.episode-title= episode.title
-                                            if episode.showTitle
-                                                span.show-name= episode.showTitle
-                                            if episode.description
-                                                p.episode-description= episode.description.substring(0, 150) + (episode.description.length > 150 ? '...' : '')
+                                    +schedule-card(episode)
                 else
                     .no-schedule
                         p No programs scheduled for #{monthName} #{currentYear}

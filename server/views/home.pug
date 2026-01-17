@@ -1,4 +1,5 @@
 extends layout
+include mixins
 
 block content
     .container(style="max-width: 480px;")
@@ -35,15 +36,10 @@ block content
             template(x-if="!currentTrack.title && isLive")
                 .metadata-loading Loading...
 
-
-
-
     section.hero
         .about-preview
-            h2.section-title
-                span.title-about AB
-                    br
-                    | OUT
+            .section-title
+                img.about-content(src="/public/assets/blob-about.svg")
             .about-content
                 p BUG Radio is on a mission to create a dynamic and interactive community radio in The Hague and it is striving to truly be a community radio, exploring the boundaries of radio as a medium for artistic expression and community connection.
                 a.read-more(href="/about") ▶ READ MORE
@@ -57,28 +53,23 @@ block content
                 each dayGroup in scheduleByDay
                     .schedule-day-block
                         .schedule-date= dayGroup.date
-                        ul.schedule-list
+                        .schedule-list
                             each episode in dayGroup.episodes
-                                li.schedule-item
-                                    span.time= episode.time
-                                    |  #{episode.title}
-                                    if episode.showTitle
-                                        |  - #{episode.showTitle}
+                                +schedule-card(episode)
             else
                 p.no-schedule No upcoming programs scheduled
 
-            a.read-more(href="/schedule") ▶ READ MORE
+            a.read-more(href="/schedule") ▶ SEE FULL SCHEDULE
 
         .shows-section
             h2.section-title
                 span.title-shows SHOWS
 
             if shows && shows.length
-                ul.shows-list
-                    each show in shows
-                        li
-                            a(href=`/shows/${show.slug || show._id}`)= show.title
+                .card-grid.card-grid--compact
+                    each show in shows.slice(0, 4)
+                        +show-card(show, 'compact')
             else
                 p.no-shows No shows available yet
 
-            a.read-more(href="/shows") ▶ READ MORE
+            a.read-more(href="/shows") ▶ SEE ALL SHOWS

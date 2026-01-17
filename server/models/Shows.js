@@ -22,12 +22,12 @@ const ShowSchema = new mongoose.Schema({
         url: { type: String, required: true },
         alt: String
     },
-    // Audio promozionale/jingle dello show (Cloudinary)
+    // Audio promozionale/jingle dello show (Backblaze B2)
     audio: {
         filename: { type: String, default: null },
         originalName: { type: String, default: null },
         url: { type: String, default: null },
-        cloudinaryId: { type: String, default: null }, // ID per eliminazione da Cloudinary
+        b2Key: { type: String, default: null }, // Key per eliminazione da B2
         duration: { type: Number, default: null }, // durata in secondi
         bitrate: { type: Number, default: null },
         size: { type: Number, default: null }, // dimensione in bytes

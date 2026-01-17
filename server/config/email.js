@@ -398,6 +398,71 @@ const sendPasswordChangedEmail = async (email, name) => {
     }
 };
 
+/**
+ * Invia email di notifica all'admin per nuova richiesta show
+ */
+const sendNewShowRequestEmail = async (artistName, artistEmail, showTitle, showDescription) => {
+    const adminEmail = process.env.ADMIN_EMAIL || 'onair.onsite@gmail.com';
+    const dashboardUrl = `${process.env.FRONTEND_URL}/admin/shows`;
+
+    const mailOptions = {
+        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+        to: adminEmail,
+        subject: `🆕 New Show Request: "${showTitle}"`,
+        html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .info-box { background: #fff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header"><h1>🆕 New Show Request</h1></div>
+          <div class="content">
+            <h2>A new show request needs your review!</h2>
+            
+            <div class="info-box">
+              <p><strong>📻 Show Title:</strong> ${showTitle}</p>
+              <p><strong>👤 Artist:</strong> ${artistName}</p>
+              <p><strong>📧 Email:</strong> ${artistEmail}</p>
+            </div>
+            
+            ${showDescription ? `
+              <div class="info-box">
+                <strong>📝 Description:</strong>
+                <p style="margin: 10px 0 0;">${showDescription.substring(0, 300)}${showDescription.length > 300 ? '...' : ''}</p>
+              </div>
+            ` : ''}
+            
+            <p>Please review this request and approve or reject it.</p>
+            
+            <div style="text-align: center;">
+              <a href="${dashboardUrl}" class="button">Review Request</a>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Email notifica admin inviata:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('❌ Errore invio email notifica admin:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     transporter,
     sendVerificationEmail,
@@ -405,5 +470,6 @@ module.exports = {
     sendShowApprovedEmail,
     sendShowRejectedEmail,
     sendPasswordResetEmail,
-    sendPasswordChangedEmail
+    sendPasswordChangedEmail,
+    sendNewShowRequestEmail
 };

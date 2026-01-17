@@ -1,4 +1,5 @@
 extends layout
+include mixins
 
 block content
     section.episode-detail
@@ -20,8 +21,10 @@ block content
 
         //- Player principale
         .episode-player(x-data="episodePlayer()")
-            if episode.audioFile && episode.audioFile.exists
-                audio#player-audio-episode(x-ref="audio" src="https://bugradio2024.out.airtime.pro/bugradio2024_a" preload="none" crossorigin="anonymous")
+            //- Usa URL diretto se disponibile (B2/Cloudinary), altrimenti fallback locale
+            if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
+                - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
+                audio#player-audio-episode(x-ref="audio" src=audioUrl preload="none" crossorigin="anonymous")
 
                 .player-main
                     button.btn-play-large(@click="togglePlay")
@@ -61,17 +64,19 @@ block content
                 h2.section-title
                     span.title-box.cyan MORE FROM THIS SHOW
 
-                ul.related-list
+                .related-list
                     each related in relatedEpisodes
-                        li.related-item
+                        .related-item
                             a(href=`/episodes/${related._id}`)
                                 span.related-title= related.title
                                 span.related-date= new Date(related.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
         .back-links
             if episode.showId
-                a.back-link(href=`/shows/${episode.showId.slug}`) ← Back to #{episode.showId.title}
-            a.back-link(href="/shows") ← All shows
+                .back-link
+                    a(href=`/shows/${episode.showId.slug}`) ← Back to #{episode.showId.title}
+            .back-link
+                a(href="/shows") ← All shows
 
     script.
         function episodePlayer() {

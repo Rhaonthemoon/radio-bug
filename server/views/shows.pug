@@ -1,4 +1,5 @@
 extends layout
+include mixins
 
 block content
     section.shows-page-new
@@ -17,25 +18,12 @@ block content
                     span.live-text LIVE
                     span.stream-text STREAM
 
-            //- Right side - Episodes list
+            //- Right side - Shows cards grid
             .shows-content-section
                 if shows && shows.length
-                    ul.episodes-bullet-list
+                    .card-grid.card-grid--shows
                         each show in shows
-                            if show.episodes && show.episodes.length
-                                each episode in show.episodes.slice(0, 15)
-                                    li
-                                        a(href=`/episodes/${episode._id || episode.slug}`)
-                                            span.episode-name= episode.title
-                                            |  -
-                                            span.artist-name= show.artist && show.artist.name ? show.artist.name : show.title
-                            else
-                                li
-                                    a(href=`/shows/${show.slug}`)
-                                        span.episode-name= show.title
-                                        if show.artist && show.artist.name
-                                            |  -
-                                            span.artist-name= show.artist.name
+                            +show-card(show)
                 else
                     .no-content
                         p No shows available yet

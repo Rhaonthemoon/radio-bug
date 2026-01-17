@@ -1,0 +1,111 @@
+//- ==================== CARD MIXINS ====================
+//- Riutilizzabile per shows, episodes, schedule items
+
+//- Card per Show (usato in shows.pug e home.pug)
+mixin show-card(show, size)
+    - var cardSize = size || 'default'
+    a.card.card--show(href=`/shows/${show.slug}` class=`card--${cardSize}`)
+        .card__cover
+            if show.image && show.image.url
+                img(src=show.image.url alt=show.image.alt || show.title loading="lazy")
+            else
+                .card__cover-placeholder
+                    span 🎵
+
+        .card__body
+            h3.card__title= show.title
+
+            if show.artist
+                .card__artist
+                    if show.artist.photo
+                        img.card__artist-avatar(src=show.artist.photo alt=show.artist.name loading="lazy")
+                    else
+                        .card__artist-avatar.card__artist-avatar--placeholder
+                    .card__artist-info
+                        span.card__artist-name= show.artist.name
+                        if show.artist.bio && cardSize !== 'compact'
+                            span.card__artist-bio= show.artist.bio.substring(0, 60) + (show.artist.bio.length > 60 ? '...' : '')
+
+            if show.genres && show.genres.length && cardSize !== 'compact'
+                .card__tags
+                    each genre in show.genres.slice(0, 3)
+                        span.card__tag= genre
+
+            if show.schedule && show.schedule.dayOfWeek && cardSize !== 'compact'
+                .card__meta
+                    span.card__meta-label Schedule:
+                    span.card__meta-value #{show.schedule.dayOfWeek} #{show.schedule.timeSlot}
+
+//- Card per Episode (usato in show.pug, schedule.pug)
+mixin episode-card(episode, options)
+    - var opts = options || {}
+    - var showLink = opts.showLink !== false
+    - var showDescription = opts.showDescription !== false
+    - var size = opts.size || 'default'
+
+    .card.card--episode(class=`card--${size}`)
+        if episode.showId && episode.showId.image && episode.showId.image.url
+            .card__cover
+                img(src=episode.showId.image.url alt=episode.title loading="lazy")
+        else if episode.image && episode.image.url
+            .card__cover
+                img(src=episode.image.url alt=episode.title loading="lazy")
+        else
+            .card__cover
+                .card__cover-placeholder
+                    span 🎧
+
+        .card__body
+            if episode.showId && showLink
+                a.card__show-link(href=`/shows/${episode.showId.slug}`)= episode.showId.title
+            else if episode.showTitle && showLink
+                span.card__show-link= episode.showTitle
+
+            h3.card__title
+                a(href=`/episodes/${episode._id}`)= episode.title
+
+            .card__date
+                if episode.airDate
+                    - var dateObj = new Date(episode.airDate)
+                    time(datetime=dateObj.toISOString())= dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                if episode.time
+                    span.card__time= episode.time
+
+            if episode.description && showDescription
+                p.card__description= episode.description.substring(0, 120) + (episode.description.length > 120 ? '...' : '')
+
+            .card__actions
+                //- Usa URL diretto se disponibile (B2/Cloudinary), altrimenti fallback locale
+                if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
+                    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
+                    button.card__play-btn(
+                        data-audio=audioUrl
+                        aria-label="Play episode"
+                    )
+                        span.card__play-icon ▶
+
+                if episode.externalLinks && episode.externalLinks.mixcloudUrl
+                    a.card__external-link(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Mixcloud
+
+//- Card per Schedule Item (versione compatta)
+mixin schedule-card(episode)
+    .card.card--schedule
+        .card__time-badge= episode.time
+
+        .card__body
+            if episode.showSlug
+                a.card__title(href=`/shows/${episode.showSlug}`)= episode.title
+            else
+                span.card__title= episode.title
+
+            if episode.showTitle
+                span.card__show-name= episode.showTitle
+
+            if episode.description
+                p.card__description= episode.description.substring(0, 100) + (episode.description.length > 100 ? '...' : '')
+
+//- Grid container per card
+mixin card-grid(type)
+    - var gridType = type || 'default'
+    .card-grid(class=`card-grid--${gridType}`)
+        block

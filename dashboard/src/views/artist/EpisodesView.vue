@@ -1208,19 +1208,21 @@ const getImageUrl = (episode) => {
   return `${serverBase}/uploads/episodes/images/${episode.image.storedFilename}`
 }
 
-const getAudioUrl = (episodeId) => {
-  // Trova episode nella lista o usa previewEpisode
-  const episode = episodes.value.find(ep => ep._id === episodeId) || previewEpisode.value
+const getAudioUrl = (id) => {
+  const ep = episodes.value.find(e => e._id === id) || previewEpisode.value
 
-  if (!episode?.audioFile?.storedFilename) {
-    return null
+  // Se c'è URL B2/Cloudinary, usalo direttamente
+  if (ep?.audioFile?.url) {
+    return ep.audioFile.url
   }
 
-  // URL diretto al file MP3
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-  const serverBase = API_BASE.replace('/api', '')
+  // Fallback per vecchi file locali (retrocompatibilità)
+  if (ep?.audioFile?.storedFilename) {
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
+    return `${base}/uploads/episodes/${ep.audioFile.storedFilename}`
+  }
 
-  return `${serverBase}/uploads/episodes/${episode.audioFile.storedFilename}`
+  return null
 }
 
 const audioPlayer = ref(null)

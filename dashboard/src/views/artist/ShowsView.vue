@@ -718,14 +718,21 @@ const openAudioDialog = (show) => {
   audioDialogVisible.value = true
 }
 
-const getAudioUrl = (show) => {
-  if (!show?.audio?.url) return ''
-  // Se l'URL è relativo, costruisci l'URL completo
-  if (show.audio.url.startsWith('/')) {
-    const baseUrl = API_URL.replace('/api', '')
-    return `${baseUrl}${show.audio.url}`
+const getAudioUrl = (id) => {
+  const ep = episodes.value.find(e => e._id === id) || previewEpisode.value
+
+  // Se c'è URL B2/Cloudinary, usalo direttamente
+  if (ep?.audioFile?.url) {
+    return ep.audioFile.url
   }
-  return show.audio.url
+
+  // Fallback per vecchi file locali (retrocompatibilità)
+  if (ep?.audioFile?.storedFilename) {
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
+    return `${base}/uploads/episodes/${ep.audioFile.storedFilename}`
+  }
+
+  return null
 }
 
 const formatDuration = (seconds) => {

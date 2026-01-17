@@ -12,7 +12,6 @@ html(lang="en")
 
         //- CSS
         link(rel="stylesheet" href="/public/css/style.css")
-        link(rel="stylesheet" href="/public/css/schedule.css")
         link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css")
 
         //- Alpine.js
@@ -42,16 +41,16 @@ html(lang="en")
 
             .track-title {
                 font-weight: 700;
-                color: #fff;
+                color: #333;
             }
 
             .track-artist {
-                color: rgba(255, 255, 255, 0.7);
+                color: #666;
             }
 
-            .show-name {
+            .now-playing .show-name {
                 font-size: 0.75rem;
-                color: rgba(255, 255, 255, 0.5);
+                color: #999;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
             }
@@ -65,7 +64,7 @@ html(lang="en")
             }
 
             .metadata-loading {
-                color: rgba(255, 255, 255, 0.4);
+                color: #999;
                 font-size: 0.8rem;
             }
 
@@ -73,17 +72,17 @@ html(lang="en")
         header.site-header
             .container
                 .header-top
-                    img.logo(src="/public/assets/logo.png")
+                    img.logo(src="/public/assets/logo.png" alt="BUG Radio")
 
                     nav.main-nav
                         a(href="/" class=currentPath === '/' ? 'active' : '') HOME
-                        a(href="/about") ABOUT
-                        a(href="/gallery") GALLERY
-                        a(href="/shows") SHOWS
-                        a(href="/schedule") SCHEDULE
-                        a(href="/open-call") OPEN CALL
-                        a(href="/education") EDUCATION
-                        a(href="/partners") PARTNERS
+                        a(href="/about" class=currentPath === '/about' ? 'active' : '') ABOUT
+                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
+                        a(href="/shows" class=currentPath === '/shows' ? 'active' : '') SHOWS
+                        a(href="/schedule" class=currentPath === '/schedule' ? 'active' : '') SCHEDULE
+                        a(href="/open-call" class=currentPath === '/open-call' ? 'active' : '') OPEN CALL
+                        a(href="/education" class=currentPath === '/education' ? 'active' : '') EDUCATION
+                        a(href="/partners" class=currentPath === '/partners' ? 'active' : '') PARTNERS
 
                     //- Hamburger Menu Button
                     button.hamburger-btn(
@@ -101,16 +100,13 @@ html(lang="en")
                     //- Mobile Menu
                     nav.mobile-nav
                         a(href="/" class=currentPath === '/' ? 'active' : '') HOME
-                        a(href="/about") ABOUT
-                        a(href="/gallery") GALLERY
-                        a(href="/shows") SHOWS
-                        a(href="/schedule") SCHEDULE
-                        a(href="/open-call") OPEN CALL
-                        a(href="/education") EDUCATION
-                        a(href="/partners") PARTNERS
-
-            //- Player
-
+                        a(href="/about" class=currentPath === '/about' ? 'active' : '') ABOUT
+                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
+                        a(href="/shows" class=currentPath === '/shows' ? 'active' : '') SHOWS
+                        a(href="/schedule" class=currentPath === '/schedule' ? 'active' : '') SCHEDULE
+                        a(href="/open-call" class=currentPath === '/open-call' ? 'active' : '') OPEN CALL
+                        a(href="/education" class=currentPath === '/education' ? 'active' : '') EDUCATION
+                        a(href="/partners" class=currentPath === '/partners' ? 'active' : '') PARTNERS
 
         //- Audio Visualizer
         script(src="/public/js/audio-visualizer.js")
