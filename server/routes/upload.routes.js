@@ -1,101 +1,246 @@
+// routes/upload.routes.js
+// Route per generare URL firmati per upload diretto a Backblaze B2
+
 const express = require('express');
 const router = express.Router();
-const path = require('path');
-const fs = require('fs');
-const upload = require('../config/multer');
 const { authMiddleware } = require('../middleware/auth');
+const { b2, B2_BUCKET, B2_BASE_URL } = require('../config/backblaze');
+const Episode = require('../models/Episode');
+const Show = require('../models/Shows');
 
 /**
- * POST /api/upload
- * Upload immagine
+ * POST /api/upload/presign/episode/:id
+ * Genera URL firmato per upload diretto audio episodio
  */
-router.post('/', authMiddleware, (req, res) => {
-  console.log('=== INIZIO UPLOAD ===');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-
-  upload.single('image')(req, res, (err) => {
-    if (err) {
-      console.error('Errore multer:', err);
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: 'File troppo grande (max 5MB)' });
-      }
-      return res.status(400).json({ error: err.message || 'Errore durante l\'upload' });
-    }
-
+router.post('/presign/episode/:id', authMiddleware, async (req, res) => {
     try {
-      if (!req.file) {
-        console.log('Nessun file ricevuto');
-        return res.status(400).json({ error: 'Nessun file caricato' });
-      }
+        const { filename } = req.body;
 
-      console.log('File ricevuto:', {
-        originalname: req.file.originalname,
-        filename: req.file.filename,
-        path: req.file.path,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      });
+        if (!filename) {
+            return res.status(400).json({ error: 'Filename richiesto' });
+        }
 
-      // Verifica che il file esista effettivamente
-      if (!fs.existsSync(req.file.path)) {
-        console.error('File non trovato dopo upload:', req.file.path);
-        return res.status(500).json({ error: 'File non salvato correttamente' });
-      }
+        const episode = await Episode.findById(req.params.id).populate('showId');
 
-      // URL pubblico dell'immagine
-      const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-      console.log('Upload completato:', imageUrl);
+        if (!episode) {
+            return res.status(404).json({ error: 'Episodio non trovato' });
+        }
 
-      res.json({
-        success: true,
-        url: imageUrl,
-        filename: req.file.filename,
-        size: req.file.size
-      });
+        // Verifica permessi
+        const isAdmin = req.user.role === 'admin';
+        const isOwner = episode.showId.createdBy.toString() === req.user._id.toString();
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'Non autorizzato' });
+        }
+
+        // Genera nome file unico
+        const key = `episodes/${episode._id}_${Date.now()}.mp3`;
+
+        // Genera URL firmato per PUT (upload)
+        // NON includere ContentType - causa SignatureDoesNotMatch
+        const presignedUrl = b2.getSignedUrl('putObject', {
+            Bucket: B2_BUCKET,
+            Key: key,
+            Expires: 3600 // 1 ora
+        });
+
+        // URL finale del file dopo upload
+        const fileUrl = `${B2_BASE_URL}/${key}`;
+
+        res.json({
+            presignedUrl,
+            key,
+            fileUrl
+        });
+
     } catch (error) {
-      console.error('Errore durante elaborazione upload:', error);
-      res.status(500).json({ error: 'Errore durante l\'upload' });
+        console.error('❌ Errore generazione presigned URL:', error);
+        res.status(500).json({ error: 'Errore generazione URL upload' });
     }
-  });
 });
 
 /**
- * DELETE /api/upload/:filename
- * Elimina immagine caricata
+ * POST /api/upload/confirm/episode/:id
+ * Conferma upload completato e salva metadata
  */
-router.delete('/:filename', authMiddleware, (req, res) => {
-  try {
-    // Prova diversi percorsi possibili
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
-    const filePath = path.join(uploadsDir, req.params.filename);
+router.post('/confirm/episode/:id', authMiddleware, async (req, res) => {
+    try {
+        const { key, fileUrl, filename, size, duration, bitrate } = req.body;
 
-    console.log('Tentativo eliminazione file:');
-    console.log('- Filename richiesto:', req.params.filename);
-    console.log('- Path completo:', filePath);
-    console.log('- Directory uploads:', uploadsDir);
-    console.log('- Directory uploads esiste:', fs.existsSync(uploadsDir));
-    console.log('- File esiste:', fs.existsSync(filePath));
+        const episode = await Episode.findById(req.params.id).populate('showId');
 
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ success: true, message: 'Immagine eliminata con successo' });
-    } else {
-      // Lista i file nella directory per debug
-      if (fs.existsSync(uploadsDir)) {
-        const files = fs.readdirSync(uploadsDir);
-        console.log('File presenti in uploads:', files);
-      }
-      res.status(404).json({
-        error: 'File non trovato',
-        path: filePath,
-        filename: req.params.filename
-      });
+        if (!episode) {
+            return res.status(404).json({ error: 'Episodio non trovato' });
+        }
+
+        // Verifica permessi
+        const isAdmin = req.user.role === 'admin';
+        const isOwner = episode.showId.createdBy.toString() === req.user._id.toString();
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'Non autorizzato' });
+        }
+
+        // Elimina vecchio file da B2 se esiste
+        if (episode.audioFile && episode.audioFile.b2Key) {
+            try {
+                await b2.deleteObject({
+                    Bucket: B2_BUCKET,
+                    Key: episode.audioFile.b2Key
+                }).promise();
+                console.log('✔ Vecchio audio eliminato da B2');
+            } catch (err) {
+                console.warn('Errore eliminazione vecchio audio:', err.message);
+            }
+        }
+
+        // Aggiorna episodio con nuovi dati audio
+        episode.audioFile = {
+            filename: filename,
+            storedFilename: key,
+            url: fileUrl,
+            b2Key: key,
+            size: size,
+            mimetype: 'audio/mpeg',
+            bitrate: bitrate || null,
+            duration: duration || null,
+            uploadedAt: new Date(),
+            exists: true
+        };
+
+        // Aggiorna duration episodio se fornita
+        if (duration && !episode.duration) {
+            episode.duration = Math.round(duration / 60);
+        }
+
+        await episode.save();
+
+        console.log(`✔ Upload diretto confermato per episodio: ${episode.title}`);
+
+        res.json({
+            message: 'Upload confermato con successo',
+            episode
+        });
+
+    } catch (error) {
+        console.error('❌ Errore conferma upload:', error);
+        res.status(500).json({ error: 'Errore conferma upload' });
     }
-  } catch (error) {
-    console.error('Errore eliminazione:', error);
-    res.status(500).json({ error: 'Errore durante l\'eliminazione' });
-  }
+});
+
+/**
+ * POST /api/upload/presign/show/:id
+ * Genera URL firmato per upload diretto audio show
+ */
+router.post('/presign/show/:id', authMiddleware, async (req, res) => {
+    try {
+        const { filename } = req.body;
+
+        if (!filename) {
+            return res.status(400).json({ error: 'Filename richiesto' });
+        }
+
+        const show = await Show.findById(req.params.id);
+
+        if (!show) {
+            return res.status(404).json({ error: 'Show non trovato' });
+        }
+
+        // Verifica permessi
+        const isAdmin = req.user.role === 'admin';
+        const isOwner = show.createdBy.toString() === req.user._id.toString();
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'Non autorizzato' });
+        }
+
+        // Genera nome file unico
+        const key = `shows/${show._id}_${Date.now()}.mp3`;
+
+        // Genera URL firmato per PUT (upload)
+        // NON includere ContentType - causa SignatureDoesNotMatch
+        const presignedUrl = b2.getSignedUrl('putObject', {
+            Bucket: B2_BUCKET,
+            Key: key,
+            Expires: 3600 // 1 ora
+        });
+
+        // URL finale del file dopo upload
+        const fileUrl = `${B2_BASE_URL}/${key}`;
+
+        res.json({
+            presignedUrl,
+            key,
+            fileUrl
+        });
+
+    } catch (error) {
+        console.error('❌ Errore generazione presigned URL:', error);
+        res.status(500).json({ error: 'Errore generazione URL upload' });
+    }
+});
+
+/**
+ * POST /api/upload/confirm/show/:id
+ * Conferma upload show completato e salva metadata
+ */
+router.post('/confirm/show/:id', authMiddleware, async (req, res) => {
+    try {
+        const { key, fileUrl, filename, size, duration, bitrate } = req.body;
+
+        const show = await Show.findById(req.params.id);
+
+        if (!show) {
+            return res.status(404).json({ error: 'Show non trovato' });
+        }
+
+        // Verifica permessi
+        const isAdmin = req.user.role === 'admin';
+        const isOwner = show.createdBy.toString() === req.user._id.toString();
+
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ error: 'Non autorizzato' });
+        }
+
+        // Elimina vecchio file da B2 se esiste
+        if (show.audio && show.audio.b2Key) {
+            try {
+                await b2.deleteObject({
+                    Bucket: B2_BUCKET,
+                    Key: show.audio.b2Key
+                }).promise();
+                console.log('✔ Vecchio audio show eliminato da B2');
+            } catch (err) {
+                console.warn('Errore eliminazione vecchio audio:', err.message);
+            }
+        }
+
+        // Aggiorna show con nuovi dati audio
+        show.audio = {
+            filename: filename,
+            originalName: filename,
+            url: fileUrl,
+            b2Key: key,
+            size: size,
+            bitrate: bitrate || null,
+            duration: duration || null,
+            uploadedAt: new Date()
+        };
+
+        await show.save();
+
+        console.log(`✔ Upload diretto show confermato: ${show.title}`);
+
+        res.json({
+            message: 'Upload confermato con successo',
+            audio: show.audio
+        });
+
+    } catch (error) {
+        console.error('❌ Errore conferma upload show:', error);
+        res.status(500).json({ error: 'Errore conferma upload' });
+    }
 });
 
 module.exports = router;

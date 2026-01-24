@@ -294,8 +294,6 @@ import { useToast } from 'primevue/usetoast'
 import ImageUpload from '@/components/ImageUpload.vue'
 import api from '@/api/axios'
 
-const API_URL = import.meta.env.VITE_API_URL
-
 const router = useRouter()
 const artistStore = useArtistStore()
 const toast = useToast()
@@ -414,6 +412,119 @@ const formatFileSize = (bytes) => {
   return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
 }
 
+// =====================================================
+// UPLOAD DIRETTO A B2
+// =====================================================
+
+/**
+ * Ottieni metadata audio dal file
+ */
+const getAudioMetadata = (file) => {
+  return new Promise((resolve) => {
+    const audio = new Audio()
+    audio.preload = 'metadata'
+
+    audio.onloadedmetadata = () => {
+      const duration = Math.round(audio.duration)
+      // Stima bitrate: (size in bits) / duration
+      const bitrate = Math.round((file.size * 8) / audio.duration / 1000)
+
+      URL.revokeObjectURL(audio.src)
+      resolve({ duration, bitrate })
+    }
+
+    audio.onerror = () => {
+      URL.revokeObjectURL(audio.src)
+      resolve({ duration: null, bitrate: null })
+    }
+
+    audio.src = URL.createObjectURL(file)
+  })
+}
+
+/**
+ * Upload file direttamente a B2 usando XMLHttpRequest (per progress)
+ */
+const uploadToB2 = (presignedUrl, file, onProgress) => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const percent = Math.round((e.loaded / e.total) * 100)
+        onProgress(percent)
+      }
+    })
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve()
+      } else {
+        reject(new Error(`Upload fallito: ${xhr.status} ${xhr.statusText}`))
+      }
+    })
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Errore di rete durante upload'))
+    })
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload annullato'))
+    })
+
+    xhr.open('PUT', presignedUrl)
+    xhr.setRequestHeader('Content-Type', file.type || 'audio/mpeg')
+    xhr.send(file)
+  })
+}
+
+/**
+ * Upload diretto audio show a B2
+ */
+const uploadShowAudioDirect = async (showId, file) => {
+  // 1. Richiedi URL firmato dal backend
+  console.log('📤 Richiesta URL firmato...')
+  uploadStatus.value = 'Preparazione upload...'
+
+  const presignRes = await api.post(`/upload/presign/show/${showId}`, {
+    filename: file.name,
+    contentType: file.type || 'audio/mpeg'
+  })
+
+  const { presignedUrl, key, fileUrl } = presignRes.data
+  console.log('✔ URL firmato ottenuto')
+
+  // 2. Upload diretto a B2
+  console.log('📤 Upload diretto a B2...')
+  uploadStatus.value = 'Caricamento audio in corso...'
+
+  await uploadToB2(presignedUrl, file, (percent) => {
+    // Mappa il progresso dell'upload dal 40% al 90%
+    uploadProgress.value = 40 + Math.round(percent * 0.5)
+  })
+  console.log('✔ Upload completato')
+
+  // 3. Ottieni metadata audio
+  const metadata = await getAudioMetadata(file)
+  console.log('✔ Metadata:', metadata)
+
+  // 4. Conferma upload al backend
+  console.log('📤 Conferma upload...')
+  uploadStatus.value = 'Finalizzazione...'
+
+  const confirmRes = await api.post(`/upload/confirm/show/${showId}`, {
+    key,
+    fileUrl,
+    filename: file.name,
+    size: file.size,
+    duration: metadata.duration,
+    bitrate: metadata.bitrate
+  })
+
+  console.log('✔ Upload confermato!')
+  return confirmRes.data
+}
+
 // Submit request
 const submitRequest = async () => {
   // Validazione campi obbligatori
@@ -509,27 +620,8 @@ const submitRequest = async () => {
 
     uploadProgress.value = 40
 
-    // STEP 2: Upload audio
-    uploadStatus.value = 'Caricamento audio in corso...'
-
-    const audioFormData = new FormData()
-    audioFormData.append('audio', selectedAudioFile.value)
-
-    await api.post(
-      `${API_URL}/shows/${showId}/audio`,
-      audioFormData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            40 + (progressEvent.loaded * 50) / progressEvent.total
-          )
-          uploadProgress.value = percentCompleted
-        }
-      }
-    )
+    // STEP 2: Upload audio DIRETTO a B2
+    await uploadShowAudioDirect(showId, selectedAudioFile.value)
 
     uploadProgress.value = 100
     uploadStatus.value = 'Completato!'

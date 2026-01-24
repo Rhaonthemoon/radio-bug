@@ -6,7 +6,7 @@ const b2 = new AWS.S3({
     accessKeyId: '00339ddb6803e510000000001',
     secretAccessKey: 'K003rY8GcTpJg01m47p28RSHPnIO/D4',
     region: 'eu-central-003',
-    s3ForcePathStyle: true,
+    s3ForcePathStyle: false,  // <-- CAMBIA DA true A false
     signatureVersion: 'v4'
 });
 

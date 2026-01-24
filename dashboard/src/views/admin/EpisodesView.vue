@@ -599,23 +599,83 @@ const uploadAudio = async () => {
   if (!selectedFile.value || !selectedEpisode.value) return
   uploading.value = true;
   uploadProgress.value = 0
-  const fd = new FormData();
-  fd.append('audio', selectedFile.value)
+
   try {
-    await api.post(`/episodes/${selectedEpisode.value._id}/upload`, fd, {
-      headers: {'Content-Type': 'multipart/form-data'},
-      onUploadProgress: (e) => {
-        uploadProgress.value = Math.round((e.loaded * 100) / e.total)
-      }
+    // STEP 1: Richiedi URL firmato
+    uploadProgress.value = 5
+    const presignRes = await api.post(`/upload/presign/episode/${selectedEpisode.value._id}`, {
+      filename: selectedFile.value.name,
+      contentType: selectedFile.value.type || 'audio/mpeg'
     })
+
+    const { presignedUrl, key, fileUrl } = presignRes.data
+    uploadProgress.value = 10
+
+    // STEP 2: Upload diretto a B2
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          // Progress da 10% a 90%
+          uploadProgress.value = 10 + Math.round((e.loaded / e.total) * 80)
+        }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve()
+        } else {
+          reject(new Error(`Upload fallito: ${xhr.status}`))
+        }
+      })
+
+      xhr.addEventListener('error', () => reject(new Error('Errore di rete')))
+      xhr.open('PUT', presignedUrl)
+      // NON impostare Content-Type - deve corrispondere alla firma
+      xhr.send(selectedFile.value)
+    })
+
+    uploadProgress.value = 90
+
+    // STEP 3: Ottieni metadata audio
+    const metadata = await new Promise((resolve) => {
+      const audio = new Audio()
+      audio.preload = 'metadata'
+      audio.onloadedmetadata = () => {
+        const duration = Math.round(audio.duration)
+        const bitrate = Math.round((selectedFile.value.size * 8) / audio.duration / 1000)
+        URL.revokeObjectURL(audio.src)
+        resolve({ duration, bitrate })
+      }
+      audio.onerror = () => {
+        URL.revokeObjectURL(audio.src)
+        resolve({ duration: null, bitrate: null })
+      }
+      audio.src = URL.createObjectURL(selectedFile.value)
+    })
+
+    // STEP 4: Conferma upload al backend
+    await api.post(`/upload/confirm/episode/${selectedEpisode.value._id}`, {
+      key,
+      fileUrl,
+      filename: selectedFile.value.name,
+      size: selectedFile.value.size,
+      duration: metadata.duration,
+      bitrate: metadata.bitrate
+    })
+
+    uploadProgress.value = 100
+
     toast.add({severity: 'success', summary: 'Uploaded', detail: 'Audio uploaded', life: 3000})
     uploadDialog.value = false;
     await loadEpisodes()
+
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Failed',
-      detail: error.response?.data?.error || 'Upload failed',
+      detail: error.response?.data?.error || error.message || 'Upload failed',
       life: 3000
     })
   } finally {

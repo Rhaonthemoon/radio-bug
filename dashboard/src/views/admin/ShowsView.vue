@@ -938,27 +938,75 @@ const uploadAudio = async () => {
   audioUploading.value = true
   uploadProgress.value = 0
 
-  const formData = new FormData()
-  formData.append('audio', selectedAudioFile.value)
-
   try {
-    const response = await api.post(
-      `${API_URL}/shows/${selectedShowForAudio.value._id}/audio`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          uploadProgress.value = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          )
+    // STEP 1: Richiedi URL firmato
+    uploadProgress.value = 5
+    const presignRes = await api.post(`/upload/presign/show/${selectedShowForAudio.value._id}`, {
+      filename: selectedAudioFile.value.name,
+      contentType: selectedAudioFile.value.type || 'audio/mpeg'
+    })
+
+    const { presignedUrl, key, fileUrl } = presignRes.data
+    uploadProgress.value = 10
+
+    // STEP 2: Upload diretto a B2
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          // Progress da 10% a 90%
+          uploadProgress.value = 10 + Math.round((e.loaded / e.total) * 80)
         }
+      })
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve()
+        } else {
+          reject(new Error(`Upload fallito: ${xhr.status}`))
+        }
+      })
+
+      xhr.addEventListener('error', () => reject(new Error('Errore di rete')))
+      xhr.open('PUT', presignedUrl)
+      // NON impostare Content-Type - deve corrispondere alla firma
+      xhr.send(selectedAudioFile.value)
+    })
+
+    uploadProgress.value = 90
+
+    // STEP 3: Ottieni metadata audio
+    const metadata = await new Promise((resolve) => {
+      const audio = new Audio()
+      audio.preload = 'metadata'
+      audio.onloadedmetadata = () => {
+        const duration = Math.round(audio.duration)
+        const bitrate = Math.round((selectedAudioFile.value.size * 8) / audio.duration / 1000)
+        URL.revokeObjectURL(audio.src)
+        resolve({ duration, bitrate })
       }
-    )
+      audio.onerror = () => {
+        URL.revokeObjectURL(audio.src)
+        resolve({ duration: null, bitrate: null })
+      }
+      audio.src = URL.createObjectURL(selectedAudioFile.value)
+    })
+
+    // STEP 4: Conferma upload al backend
+    const confirmRes = await api.post(`/upload/confirm/show/${selectedShowForAudio.value._id}`, {
+      key,
+      fileUrl,
+      filename: selectedAudioFile.value.name,
+      size: selectedAudioFile.value.size,
+      duration: metadata.duration,
+      bitrate: metadata.bitrate
+    })
+
+    uploadProgress.value = 100
 
     // Aggiorna lo show con i nuovi dati audio
-    selectedShowForAudio.value.audio = response.data.audio
+    selectedShowForAudio.value.audio = confirmRes.data.audio
 
     toast.add({
       severity: 'success',
@@ -978,7 +1026,7 @@ const uploadAudio = async () => {
     toast.add({
       severity: 'error',
       summary: 'Errore',
-      detail: error.response?.data?.error || 'Errore nel caricamento dell\'audio',
+      detail: error.response?.data?.error || error.message || 'Errore nel caricamento dell\'audio',
       life: 4000
     })
   } finally {

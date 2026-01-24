@@ -1700,3 +1700,241 @@ body.menu-open {
         grid-template-columns: 1fr;
     }
 }
+/* ==================== ABOUT PAGE ==================== */
+.about-page-new {
+    padding: 0;
+}
+
+.about-layout {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 40px;
+    align-items: start;
+}
+
+/* Left Sidebar */
+.about-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.about-blob-img {
+    width: 300px;
+    height: auto;
+}
+
+/* Events Grid */
+.events-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.event-card {
+    aspect-ratio: 1 / 1.2;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--color-light-gray);
+}
+
+.event-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+
+.event-card:hover img {
+    transform: scale(1.05);
+}
+
+/* Events Button */
+.events-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 30px;
+    border: 2px solid var(--color-black);
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.4;
+    transition: background var(--transition-base), color var(--transition-base);
+}
+
+.events-btn:hover {
+    background: var(--color-black);
+    color: var(--color-white);
+}
+
+/* Player Sidebar */
+.player-sidebar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+}
+
+.player-sidebar .player-controls {
+    position: relative;
+}
+
+.btn-play-sidebar {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 3px solid #ff4444;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    position: relative;
+}
+
+.btn-play-sidebar::before,
+.btn-play-sidebar::after {
+    content: '';
+    position: absolute;
+    border: 2px solid #ff4444;
+    border-radius: var(--radius-full);
+    opacity: 0.5;
+}
+
+.btn-play-sidebar::before {
+    width: 80px;
+    height: 80px;
+}
+
+.btn-play-sidebar::after {
+    width: 100px;
+    height: 100px;
+    opacity: 0.3;
+}
+
+.btn-play-sidebar .play-icon {
+    color: #ff4444;
+    font-size: 20px;
+}
+
+.player-sidebar .player-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+}
+
+.player-sidebar .live-text {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ff4444;
+}
+
+.player-sidebar .stream-text {
+    font-size: 28px;
+    font-weight: 400;
+    color: #ff4444;
+}
+
+/* Right Content Section */
+.about-content-section {
+    padding-top: 0;
+}
+
+.about-text p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--color-black);
+    margin-bottom: 16px;
+    background: transparent;
+}
+
+.about-text p strong {
+    font-weight: 700;
+}
+
+.about-text a {
+    text-decoration: underline;
+    transition: color var(--transition-fast);
+}
+
+.about-text a:hover {
+    color: var(--color-purple);
+}
+
+/* Join Community Section */
+.join-community {
+    text-align: center;
+    padding: 60px 0;
+    margin-top: 40px;
+}
+
+.join-community h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.join-community .submit-link {
+    font-size: 14px;
+    text-decoration: underline;
+    color: var(--color-black);
+    transition: color var(--transition-fast);
+}
+
+.join-community .submit-link:hover {
+    color: var(--color-purple);
+}
+
+/* About Page Responsive */
+@media (max-width: 900px) {
+    .about-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .about-sidebar {
+        align-items: center;
+    }
+
+    .about-blob-img {
+        width: 250px;
+    }
+
+    .events-grid {
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-blob-img {
+        width: 200px;
+    }
+
+    .about-text p {
+        font-size: 13px;
+    }
+
+    .player-sidebar .live-text,
+    .player-sidebar .stream-text {
+        font-size: 22px;
+    }
+
+    .btn-play-sidebar {
+        width: 50px;
+        height: 50px;
+    }
+
+    .btn-play-sidebar::before {
+        width: 70px;
+        height: 70px;
+    }
+
+    .btn-play-sidebar::after {
+        width: 90px;
+        height: 90px;
+    }
+}

@@ -1,0 +1,83 @@
+extends layout
+
+block content
+    section.about-page-new
+        .about-layout
+            //- Left side - Blob title, events, live stream
+            .about-sidebar
+                img.about-blob-img(src="/assets/blob-about.svg" alt="About")
+
+                //- Events grid
+                .events-grid
+                    .event-card
+                        img(src="/assets/events/2025.jpg" alt="2025")
+                    .event-card
+                        img(src="/assets/events/event-2.jpg" alt="Event")
+                    .event-card
+                        img(src="/assets/events/event-3.jpg" alt="Event")
+                    .event-card
+                        img(src="/assets/events/event-4.jpg" alt="Event")
+
+                a.events-btn(href="/events")
+                    span GUARDA TUTTI
+                    span GLI EVENTI
+
+                //- Player (same as home)
+                .player-sidebar(x-data="radioPlayer()" x-init="init()")
+                    .player-controls
+                        audio#player-audio-about(
+                            x-ref="audio"
+                            :src="streamUrl"
+                            preload="none"
+                            crossorigin="anonymous"
+                        )
+                        button.btn-play-sidebar(@click="togglePlay()")
+                            span.play-icon
+                                i.fa-solid.fa-play(x-show="!playing")
+                                i.fa-solid.fa-pause(x-show="playing")
+                    .player-text
+                        span.live-text LIVE
+                        span.stream-text STREAM
+
+            //- Right side - Content
+            .about-content-section
+                .about-text
+                    p
+                        strong BUG Radio
+                        | is launched its website during On Air - On Site Radio Festival, with a starter set of two shows. From the November 2024 on, it will air regular shows from a variety of radio-makers, and host live events too. BUG Radio is on a mission to create a dynamic and interactive community radio in The Hague and it is striving to truly be community radio, exploring the boundaries of radio as a medium for artistic expression and community connection. Through a series of curated radio events and live broadcasts, we seek to create a space for experimental music practices, interdisciplinary collaborations, and sonic exploration.
+
+                    p
+                        strong BUG Radio
+                        | is driven by a strong belief in the transformative power of radio as a public platform for artistic engagement and community building. By embracing radio as a tool for storytelling and cultural exchange, we aim to celebrate the diversity of voices within our community. Through our radio shows and collaborative projects with artists and musicians, we strive to create a space where everyone's voice matters.
+
+                    p
+                        strong Socio-Political:
+                        | BUG Radio will have dedicated time slots for socio-political radio art/documentaries/community projects. (Amateur)radio-makers are welcome to send proposals to BUG Radio's Open Call on any subject they find urgent, interesting, relevant. We want to hear your thoughts, and we want to provide you with a safe space to voice them. In addition, BUG Radio Curators Margherita Brillada and Leonie Roessler will engage with the local population in The Hague to produce radio with those that are most isolated, be it the homeless or the elderly. As a first show in this genre, BUG Radio is airing "On Art, Disability, Barriers, and Chances". This feature includes interviews and breath-taking works by disabled artists. Topics include barriers in education and daily life, but also in the art and music world in particular.
+
+                    p
+                        strong Connecting Communities:
+                        | BUG Radio has confirmed monthly shows from Iranian label Noise à Noise, representing the noise art community of Tehran. We are excited to partner with Soheil Soheili, who runs the label, to provide a voice for a musical community that is under severe pressure at the moment. In addition, Musica Dispersa will provide a monthly show on Women in Experimental Music. Roberto Vilela started Musica Dispersa Radio and the label in 2012, and initiated the Women in Experimental Music Project in 2019. BUG radio is closely connected to the students of the Institute of Sonology and West Den Haag. And this is just the start.
+
+                    p
+                        strong On Site:
+                        | BUG Radio will broadcast regular radio events live from
+                        a(href="https://westdenhaag.nl" target="_blank") West Den Haag
+                        |  - a stunning museum which is occupying the old embassy of the United States in the heart of The Hague's Museum District. These hours will be open for live experimentation in radio and a way for community members to meet in person.
+
+                    p
+                        strong History:
+                        | We often think of history as something large-scale that happened long ago, and is in a way distant to us and our daily lives. BUG Radio wants to connect to the immediate artistic history of The Hague, history that is ongoing, history of artists that may still be living but have had an impact on how we create music and art. We would like to connect older artists with the young and upcoming, for there is so much to be passed on, and so much that can be exchanged. As a first step we will tap into the archives of West Den Haag and Studio LOOS, and feature highlights of artist talks and legendary free improvisation sessions. These shows will start airing in autumn 2024.
+
+                    p
+                        | Feel free to reach out to us with any questions at
+                        a(href="mailto:info@bugradio.org") info@bugradio.org
+                        |  or connect with us on
+                        a(href="https://instagram.com/bugradio" target="_blank") Instagram
+                        |  or
+                        a(href="https://facebook.com/bugradio" target="_blank") Facebook
+                        | .
+
+        //- Join community section
+        section.join-community
+            h2 JOIN OUR COMMUNITY
+            a.submit-link(href="/open-call") SUBMIT YOUR SHOW

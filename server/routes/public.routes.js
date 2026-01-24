@@ -113,7 +113,17 @@ router.get('/shows', async (req, res) => {
         res.status(500).send('Errore server');
     }
 });
+router.get('/about', async (req, res) => {
+    try {
 
+        res.render('about', {
+            title: 'Shows - BUG Radio'
+        });
+    } catch (err) {
+        console.error('Shows error:', err);
+        res.status(500).send('Errore server');
+    }
+});
 // Show singolo
 router.get('/shows/:slug', async (req, res) => {
     try {
