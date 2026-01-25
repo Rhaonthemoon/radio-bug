@@ -156,9 +156,8 @@ const sendWelcomeEmail = async (email, name) => {
             <p>Your account has been successfully verified! 🎉</p>
             <p>You can now access all BUG Radio features:</p>
             <ul>
-              <li>📻 Manage your shows</li>
-              <li>🎵 Upload episodes</li>
-              <li>📊 View listening statistics</li>
+              <li>📻 Submit your request</li>
+              <li>🎵 Manage your episodes</li>
             </ul>
             <p>Log in now to get started:</p>
             <p><a href="${process.env.FRONTEND_URL}/login" style="color: #667eea;">Go to Dashboard</a></p>

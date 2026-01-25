@@ -65,7 +65,13 @@ img { max-width: 100%; height: auto; display: block; }
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
 }
-
+.container-fluid {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
 .header-top {
     display: flex;
     align-items: center;

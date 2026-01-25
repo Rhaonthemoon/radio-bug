@@ -49,7 +49,7 @@
 
             <!-- NEW SECTION: Show Audio -->
             <div class="form-section">
-              <h3><i class="pi pi-volume-up"></i> Show Audio *</h3>
+              <h3><i class="pi pi-volume-up"></i>Audio file *</h3>
               <p class="section-description">
                 Upload a representative audio file of your show (e.g. mix, demo, pilot episode)
               </p>
@@ -57,7 +57,7 @@
               <div class="audio-upload-section">
                 <div class="upload-requirements">
                   <Tag severity="info" icon="pi pi-info-circle">
-                    Formats: MP3 | Max 500MB | Min 128kbps | Max 60 minutes
+                    Formats: MP3 | Max 500MB | Min 128kbps | Max 120 minutes
                   </Tag>
                 </div>
 
@@ -184,9 +184,9 @@
               </div>
             </div>
 
-            <!-- Genres and Programming -->
+            <!-- Genres -->
             <div class="form-section">
-              <h3><i class="pi pi-tags"></i> Music Genres and Programming</h3>
+              <h3><i class="pi pi-tags"></i> Music Genres</h3>
 
               <div class="form-field">
                 <label for="genres">Music Genres *</label>
@@ -209,31 +209,6 @@
                   class="w-full"
                 />
                 <small>Keywords to describe your show (optional)</small>
-              </div>
-
-              <div class="form-row">
-                <div class="form-field">
-                  <label for="dayOfWeek">Preferred Day *</label>
-                  <Dropdown
-                    id="dayOfWeek"
-                    v-model="formData.schedule.dayOfWeek"
-                    :options="dayOptions"
-                    placeholder="Select day"
-                    required
-                    class="w-full"
-                  />
-                </div>
-
-                <div class="form-field">
-                  <label for="timeSlot">Time Slot *</label>
-                  <InputText
-                    id="timeSlot"
-                    v-model="formData.schedule.timeSlot"
-                    placeholder="E.g. 8:00 PM - 10:00 PM"
-                    required
-                    class="w-full"
-                  />
-                </div>
               </div>
 
               <div class="form-field">
@@ -330,8 +305,6 @@ const formData = ref({
     alt: ''
   },
   schedule: {
-    dayOfWeek: '',
-    timeSlot: '',
     frequency: 'weekly'
   }
 })
@@ -339,21 +312,13 @@ const formData = ref({
 const genresInput = ref('')
 const tagsInput = ref('')
 
-const dayOptions = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday'
-]
-
 const frequencyOptions = [
   { label: 'Weekly', value: 'weekly' },
   { label: 'Bi-weekly', value: 'biweekly' },
   { label: 'Monthly', value: 'monthly' },
-  { label: 'Una tantum', value: 'onetime' }
+  { label: 'Bi-monthly', value: 'bimonthly' },
+  { label: 'Quarterly', value: 'quarterly' },
+  { label: 'One-time', value: 'onetime' }
 ]
 
 // Audio file methods
@@ -558,17 +523,7 @@ const submitRequest = async () => {
     return
   }
 
-  if (!formData.value.schedule.dayOfWeek || !formData.value.schedule.timeSlot) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Missing fields',
-      detail: 'Select day and time slot',
-      life: 3000
-    })
-    return
-  }
-
-  // ⚠️ VALIDAZIONE AUDIO OBBLIGATORIO
+  // ⚠️ AUDIO REQUIRED VALIDATION
   if (!selectedAudioFile.value) {
     audioError.value = 'Audio file is required to submit request'
     toast.add({
@@ -603,8 +558,6 @@ const submitRequest = async () => {
         alt: formData.value.title
       },
       schedule: {
-        dayOfWeek: formData.value.schedule.dayOfWeek,
-        timeSlot: formData.value.schedule.timeSlot,
         frequency: formData.value.schedule.frequency || 'weekly'
       },
       genres: genresInput.value.split(',').map(g => g.trim()).filter(g => g),

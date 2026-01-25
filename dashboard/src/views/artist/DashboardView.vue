@@ -82,20 +82,17 @@
       <!-- ✅ AGGIORNATO: Messaggio per show approvati con link a Episodes -->
       <Message v-if="artistStore.approvedCount > 0" severity="success" :closable="false" class="info-message">
         <div class="message-content">
-          <i class="pi pi-check-circle"></i>
-          <div>
             <strong>Congratulations!</strong> You have {{ artistStore.approvedCount }} {{ artistStore.approvedCount === 1 ? 'approved show' : 'approved shows' }}.
             <br>
             <strong>✨ You can now manage your episodes!</strong>
             <Button
                 label="Go to Episodes"
                 icon="pi pi-play-circle"
-                @click="$router.push('/artist/episodes')"
+                @click="$router.push('/artist/my-episodes')"
                 size="small"
                 class="mt-2"
             />
           </div>
-        </div>
       </Message>
 
       <!-- Requests Table -->
