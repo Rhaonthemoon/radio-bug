@@ -5,59 +5,59 @@
         <template #header>
           <div class="request-header">
             <i class="pi pi-radio-button" style="font-size: 3rem; color: #3b82f6;"></i>
-            <h2>Richiedi il tuo Show su BUG Radio</h2>
-            <p>Compila tutti i campi per inviare la tua richiesta all'admin</p>
+            <h2>Request Your Show on BUG Radio</h2>
+            <p>Fill in all fields to submit your request to the admin</p>
           </div>
         </template>
 
         <template #content>
           <form @submit.prevent="submitRequest" class="request-form">
-            <!-- Informazioni Show -->
+            <!-- Show Information -->
             <div class="form-section">
-              <h3><i class="pi pi-microphone"></i> Informazioni Show</h3>
+              <h3><i class="pi pi-microphone"></i> Show Information</h3>
 
               <div class="form-field">
                 <ImageUpload
-                  label="Immagine Copertina Show *"
+                  label="Show Cover Image *"
                   v-model="formData.image.url"
                 />
               </div>
 
               <div class="form-field">
-                <label for="title">Titolo Show *</label>
+                <label for="title">Show Title *</label>
                 <InputText
                   id="title"
                   v-model="formData.title"
-                  placeholder="Es. Noise à Noise, Deep Space Radio..."
+                  placeholder="E.g. Noise à Noise, Deep Space Radio..."
                   required
                   class="w-full"
                 />
               </div>
 
               <div class="form-field">
-                <label for="description">Descrizione Show *</label>
+                <label for="description">Show Description *</label>
                 <Textarea
                   id="description"
                   v-model="formData.description"
                   rows="4"
-                  placeholder="Descrivi il tuo show: format, contenuti, stile..."
+                  placeholder="Describe your show: format, content, style..."
                   required
                   class="w-full"
                 />
               </div>
             </div>
 
-            <!-- NUOVA SEZIONE: Audio Show -->
+            <!-- NEW SECTION: Show Audio -->
             <div class="form-section">
-              <h3><i class="pi pi-volume-up"></i> Audio Show *</h3>
+              <h3><i class="pi pi-volume-up"></i> Show Audio *</h3>
               <p class="section-description">
-                Carica un file audio rappresentativo del tuo show (es. mix, demo, episodio pilota)
+                Upload a representative audio file of your show (e.g. mix, demo, pilot episode)
               </p>
 
               <div class="audio-upload-section">
                 <div class="upload-requirements">
                   <Tag severity="info" icon="pi pi-info-circle">
-                    Formati: MP3 | Max 500MB | Min 128kbps | Max 60 minuti
+                    Formats: MP3 | Max 500MB | Min 128kbps | Max 60 minutes
                   </Tag>
                 </div>
 
@@ -71,7 +71,7 @@
                   />
                   <Button
                     type="button"
-                    :label="selectedAudioFile ? 'Cambia file' : 'Seleziona file MP3'"
+                    :label="selectedAudioFile ? 'Change file' : 'Select MP3 file'"
                     :icon="selectedAudioFile ? 'pi pi-refresh' : 'pi pi-folder-open'"
                     :severity="selectedAudioFile ? 'success' : 'secondary'"
                     outlined
@@ -96,7 +96,7 @@
                     text
                     rounded
                     @click="clearAudioFile"
-                    v-tooltip.top="'Rimuovi'"
+                    v-tooltip.top="'Remove'"
                   />
                 </div>
 
@@ -107,23 +107,23 @@
               </div>
             </div>
 
-            <!-- Informazioni Artista -->
+            <!-- Artist Information -->
             <div class="form-section">
-              <h3><i class="pi pi-user"></i> Informazioni Artista</h3>
+              <h3><i class="pi pi-user"></i> Artist Information</h3>
 
               <div class="form-field">
                 <ImageUpload
-                  label="Foto Artista"
+                  label="Artist Photo"
                   v-model="formData.artist.photo"
                 />
               </div>
 
               <div class="form-field">
-                <label for="artistName">Nome Artista / Collettivo *</label>
+                <label for="artistName">Artist / Collective Name *</label>
                 <InputText
                   id="artistName"
                   v-model="formData.artist.name"
-                  placeholder="Il tuo nome artistico"
+                  placeholder="Your artist name"
                   required
                   class="w-full"
                 />
@@ -135,14 +135,14 @@
                   id="artistBio"
                   v-model="formData.artist.bio"
                   rows="3"
-                  placeholder="Parlaci di te..."
+                  placeholder="Tell us about yourself..."
                   required
                   class="w-full"
                 />
               </div>
 
               <div class="form-field">
-                <label for="artistEmail">Email di contatto *</label>
+                <label for="artistEmail">Contact Email *</label>
                 <InputText
                   id="artistEmail"
                   v-model="formData.artist.email"
@@ -184,12 +184,12 @@
               </div>
             </div>
 
-            <!-- Generi e Programmazione -->
+            <!-- Genres and Programming -->
             <div class="form-section">
-              <h3><i class="pi pi-tags"></i> Generi Musicali e Programmazione</h3>
+              <h3><i class="pi pi-tags"></i> Music Genres and Programming</h3>
 
               <div class="form-field">
-                <label for="genres">Generi Musicali *</label>
+                <label for="genres">Music Genres *</label>
                 <InputText
                   id="genres"
                   v-model="genresInput"
@@ -197,7 +197,7 @@
                   required
                   class="w-full"
                 />
-                <small>Inserisci i generi separati da virgola (almeno uno)</small>
+                <small>Enter genres separated by comma (at least one)</small>
               </div>
 
               <div class="form-field">
@@ -208,28 +208,28 @@
                   placeholder="underground, live, dj-set..."
                   class="w-full"
                 />
-                <small>Parole chiave per descrivere il tuo show (opzionale)</small>
+                <small>Keywords to describe your show (optional)</small>
               </div>
 
               <div class="form-row">
                 <div class="form-field">
-                  <label for="dayOfWeek">Giorno Preferito *</label>
+                  <label for="dayOfWeek">Preferred Day *</label>
                   <Dropdown
                     id="dayOfWeek"
                     v-model="formData.schedule.dayOfWeek"
                     :options="dayOptions"
-                    placeholder="Seleziona giorno"
+                    placeholder="Select day"
                     required
                     class="w-full"
                   />
                 </div>
 
                 <div class="form-field">
-                  <label for="timeSlot">Fascia Oraria *</label>
+                  <label for="timeSlot">Time Slot *</label>
                   <InputText
                     id="timeSlot"
                     v-model="formData.schedule.timeSlot"
-                    placeholder="Es. 20:00 - 22:00"
+                    placeholder="E.g. 8:00 PM - 10:00 PM"
                     required
                     class="w-full"
                   />
@@ -237,20 +237,20 @@
               </div>
 
               <div class="form-field">
-                <label for="frequency">Frequenza</label>
+                <label for="frequency">Frequency</label>
                 <Dropdown
                   id="frequency"
                   v-model="formData.schedule.frequency"
                   :options="frequencyOptions"
                   optionLabel="label"
                   optionValue="value"
-                  placeholder="Seleziona frequenza"
+                  placeholder="Select frequency"
                   class="w-full"
                 />
               </div>
             </div>
 
-            <!-- Progress Upload -->
+            <!-- Upload Progress -->
             <div v-if="uploading" class="upload-progress-section">
               <div class="progress-info">
                 <i class="pi pi-spin pi-spinner"></i>
@@ -263,7 +263,7 @@
             <div class="form-actions">
               <Button
                 type="button"
-                label="Annulla"
+                label="Cancel"
                 severity="secondary"
                 outlined
                 @click="$router.push('/artist/dashboard')"
@@ -271,7 +271,7 @@
               />
               <Button
                 type="submit"
-                label="Invia Richiesta"
+                label="Submit Request"
                 icon="pi pi-send"
                 :loading="loading"
                 :disabled="uploading"
@@ -340,19 +340,19 @@ const genresInput = ref('')
 const tagsInput = ref('')
 
 const dayOptions = [
-  'Lunedì',
-  'Martedì',
-  'Mercoledì',
-  'Giovedì',
-  'Venerdì',
-  'Sabato',
-  'Domenica'
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
 ]
 
 const frequencyOptions = [
-  { label: 'Settimanale', value: 'weekly' },
-  { label: 'Bisettimanale', value: 'biweekly' },
-  { label: 'Mensile', value: 'monthly' },
+  { label: 'Weekly', value: 'weekly' },
+  { label: 'Bi-weekly', value: 'biweekly' },
+  { label: 'Monthly', value: 'monthly' },
   { label: 'Una tantum', value: 'onetime' }
 ]
 
@@ -368,26 +368,26 @@ const onAudioFileChange = (event) => {
   audioError.value = ''
 
   if (file) {
-    // Validazione tipo file
+    // File type validation
     if (!file.type.includes('audio/mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
-      audioError.value = 'Seleziona un file MP3 valido'
+      audioError.value = 'Select a valid MP3 file'
       toast.add({
         severity: 'error',
-        summary: 'Formato non valido',
-        detail: 'Seleziona un file MP3',
+        summary: 'Invalid format',
+        detail: 'Select an MP3 file',
         life: 3000
       })
       return
     }
 
-    // Validazione dimensione (500MB)
+    // Size validation (500MB)
     const maxSize = 500 * 1024 * 1024
     if (file.size > maxSize) {
-      audioError.value = 'Il file supera la dimensione massima di 500MB'
+      audioError.value = 'File exceeds maximum size of 500MB'
       toast.add({
         severity: 'error',
-        summary: 'File troppo grande',
-        detail: 'La dimensione massima è 500MB',
+        summary: 'File too large',
+        detail: 'Maximum size is 500MB',
         life: 3000
       })
       return
@@ -443,7 +443,7 @@ const getAudioMetadata = (file) => {
 }
 
 /**
- * Upload file direttamente a B2 usando XMLHttpRequest (per progress)
+ * Upload file directly to B2 using XMLHttpRequest (for progress)
  */
 const uploadToB2 = (presignedUrl, file, onProgress) => {
   return new Promise((resolve, reject) => {
@@ -460,16 +460,16 @@ const uploadToB2 = (presignedUrl, file, onProgress) => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve()
       } else {
-        reject(new Error(`Upload fallito: ${xhr.status} ${xhr.statusText}`))
+        reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`))
       }
     })
 
     xhr.addEventListener('error', () => {
-      reject(new Error('Errore di rete durante upload'))
+      reject(new Error('Network error during upload'))
     })
 
     xhr.addEventListener('abort', () => {
-      reject(new Error('Upload annullato'))
+      reject(new Error('Upload cancelled'))
     })
 
     xhr.open('PUT', presignedUrl)
@@ -479,12 +479,12 @@ const uploadToB2 = (presignedUrl, file, onProgress) => {
 }
 
 /**
- * Upload diretto audio show a B2
+ * Direct upload of show audio to B2
  */
 const uploadShowAudioDirect = async (showId, file) => {
   // 1. Richiedi URL firmato dal backend
-  console.log('📤 Richiesta URL firmato...')
-  uploadStatus.value = 'Preparazione upload...'
+  console.log('📤 Requesting signed URL...')
+  uploadStatus.value = 'Preparing upload...'
 
   const presignRes = await api.post(`/upload/presign/show/${showId}`, {
     filename: file.name,
@@ -492,24 +492,24 @@ const uploadShowAudioDirect = async (showId, file) => {
   })
 
   const { presignedUrl, key, fileUrl } = presignRes.data
-  console.log('✔ URL firmato ottenuto')
+  console.log('✔ Signed URL obtained')
 
-  // 2. Upload diretto a B2
-  console.log('📤 Upload diretto a B2...')
-  uploadStatus.value = 'Caricamento audio in corso...'
+  // 2. Direct upload to B2
+  console.log('📤 Direct upload to B2...')
+  uploadStatus.value = 'Uploading audio...'
 
   await uploadToB2(presignedUrl, file, (percent) => {
     // Mappa il progresso dell'upload dal 40% al 90%
     uploadProgress.value = 40 + Math.round(percent * 0.5)
   })
-  console.log('✔ Upload completato')
+  console.log('✔ Upload complete')
 
   // 3. Ottieni metadata audio
   const metadata = await getAudioMetadata(file)
   console.log('✔ Metadata:', metadata)
 
-  // 4. Conferma upload al backend
-  console.log('📤 Conferma upload...')
+  // 4. Confirm upload to backend
+  console.log('📤 Confirming upload...')
   uploadStatus.value = 'Finalizzazione...'
 
   const confirmRes = await api.post(`/upload/confirm/show/${showId}`, {
@@ -521,18 +521,18 @@ const uploadShowAudioDirect = async (showId, file) => {
     bitrate: metadata.bitrate
   })
 
-  console.log('✔ Upload confermato!')
+  console.log('✔ Upload confirmed!')
   return confirmRes.data
 }
 
 // Submit request
 const submitRequest = async () => {
-  // Validazione campi obbligatori
+  // Required fields validation
   if (!formData.value.title || !formData.value.description) {
     toast.add({
       severity: 'warn',
-      summary: 'Campi mancanti',
-      detail: 'Compila titolo e descrizione dello show',
+      summary: 'Missing fields',
+      detail: 'Fill in show title and description',
       life: 3000
     })
     return
@@ -541,7 +541,7 @@ const submitRequest = async () => {
   if (!formData.value.artist.name || !formData.value.artist.bio || !formData.value.artist.email) {
     toast.add({
       severity: 'warn',
-      summary: 'Campi mancanti',
+      summary: 'Missing fields',
       detail: 'Compila tutti i campi dell\'artista',
       life: 3000
     })
@@ -551,8 +551,8 @@ const submitRequest = async () => {
   if (!genresInput.value) {
     toast.add({
       severity: 'warn',
-      summary: 'Campi mancanti',
-      detail: 'Inserisci almeno un genere musicale',
+      summary: 'Missing fields',
+      detail: 'Enter at least one music genre',
       life: 3000
     })
     return
@@ -561,8 +561,8 @@ const submitRequest = async () => {
   if (!formData.value.schedule.dayOfWeek || !formData.value.schedule.timeSlot) {
     toast.add({
       severity: 'warn',
-      summary: 'Campi mancanti',
-      detail: 'Seleziona giorno e fascia oraria',
+      summary: 'Missing fields',
+      detail: 'Select day and time slot',
       life: 3000
     })
     return
@@ -570,11 +570,11 @@ const submitRequest = async () => {
 
   // ⚠️ VALIDAZIONE AUDIO OBBLIGATORIO
   if (!selectedAudioFile.value) {
-    audioError.value = 'Il file audio è obbligatorio per inviare la richiesta'
+    audioError.value = 'Audio file is required to submit request'
     toast.add({
       severity: 'error',
-      summary: 'Audio mancante',
-      detail: 'Devi caricare un file audio per il tuo show',
+      summary: 'Missing audio',
+      detail: 'You must upload an audio file for your show',
       life: 4000
     })
     return
@@ -584,8 +584,8 @@ const submitRequest = async () => {
   uploading.value = true
 
   try {
-    // STEP 1: Crea lo show (stato pending)
-    uploadStatus.value = 'Creazione richiesta show...'
+    // STEP 1: Create show (pending status)
+    uploadStatus.value = 'Creating show request...'
     uploadProgress.value = 10
 
     const requestData = {
@@ -620,7 +620,7 @@ const submitRequest = async () => {
 
     uploadProgress.value = 40
 
-    // STEP 2: Upload audio DIRETTO a B2
+    // STEP 2: Direct audio upload to B2
     await uploadShowAudioDirect(showId, selectedAudioFile.value)
 
     uploadProgress.value = 100
@@ -628,7 +628,7 @@ const submitRequest = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Richiesta Inviata! 🎉',
+      summary: 'Request Submitted! 🎉',
       detail: 'La tua richiesta è stata inviata all\'admin per l\'approvazione',
       life: 5000
     })
@@ -638,11 +638,11 @@ const submitRequest = async () => {
     }, 2000)
 
   } catch (error) {
-    console.error('Errore invio richiesta:', error)
+    console.error('Error submitting request:', error)
 
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: error.response?.data?.error || artistStore.error || 'Errore nell\'invio della richiesta',
       life: 4000
     })

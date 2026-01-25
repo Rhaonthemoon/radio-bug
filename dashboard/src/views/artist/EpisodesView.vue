@@ -317,39 +317,7 @@
         </div>
 
         <!-- External Links -->
-        <div class="form-section">
-          <h4>External Links (Optional)</h4>
 
-          <div class="form-group">
-            <label for="mixcloudUrl">Mixcloud URL</label>
-            <InputText
-              id="mixcloudUrl"
-              v-model="episodeForm.externalLinks.mixcloudUrl"
-              placeholder="https://www.mixcloud.com/..."
-              class="w-full"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="youtubeUrl">YouTube URL</label>
-            <InputText
-              id="youtubeUrl"
-              v-model="episodeForm.externalLinks.youtubeUrl"
-              placeholder="https://www.youtube.com/..."
-              class="w-full"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="spotifyUrl">Spotify URL</label>
-            <InputText
-              id="spotifyUrl"
-              v-model="episodeForm.externalLinks.spotifyUrl"
-              placeholder="https://open.spotify.com/..."
-              class="w-full"
-            />
-          </div>
-        </div>
       </div>
 
       <template #footer>
@@ -1202,10 +1170,19 @@ const downloadAudio = async () => {
 
 // ✅ Helper Functions
 const getImageUrl = (episode) => {
-  if (!episode?.image?.storedFilename) return null
-  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
-  const serverBase = API_BASE.replace('/api', '')
-  return `${serverBase}/uploads/episodes/images/${episode.image.storedFilename}`
+  // Il backend salva già l'URL completo di B2 in episode.image.url
+  if (episode?.image?.url) {
+    return episode.image.url
+  }
+
+  // Fallback per vecchie immagini locali (se esistenti)
+  if (episode?.image?.storedFilename) {
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+    const serverBase = API_BASE.replace('/api', '')
+    return `${serverBase}/uploads/${episode.image.storedFilename}`
+  }
+
+  return null
 }
 
 const getAudioUrl = (id) => {

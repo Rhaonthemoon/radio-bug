@@ -79,7 +79,7 @@
             <template #body="{ data }">
               <div class="mixcloud-cell">
                 <Tag v-if="data.mixcloud?.status === 'uploaded'" value="UPLOADED" severity="success"
-                     v-tooltip.top="'Pubblicato su Mixcloud'"/>
+                     v-tooltip.top="'Published on Mixcloud'"/>
                 <Tag v-else-if="data.mixcloud?.status === 'uploading'" severity="info"><i
                   class="pi pi-spin pi-spinner" style="margin-right:4px"></i>UPLOADING
                 </Tag>
@@ -128,7 +128,7 @@
                   v-if="data.mixcloud?.status === 'uploaded' && data.audioFile?.exists"
                   icon="pi pi-trash"
                   @click="confirmDeleteAudioFile(data)"
-                  v-tooltip.top="'Elimina MP3 (già su Mixcloud)'"
+                  v-tooltip.top="'Delete MP3 (uploaded on Mixcloud)'"
                   severity="warning"
                   text
                   rounded
@@ -219,19 +219,6 @@
                     optionValue="value" class="w-full"/>
         </div>
 
-        <div class="form-section">
-          <h4>External Links</h4>
-          <div class="form-group">
-            <label>Mixcloud URL</label>
-            <InputText v-model="episodeForm.externalLinks.mixcloudUrl"
-                       placeholder="https://www.mixcloud.com/..." class="w-full"/>
-          </div>
-          <div class="form-group">
-            <label>YouTube URL</label>
-            <InputText v-model="episodeForm.externalLinks.youtubeUrl"
-                       placeholder="https://www.youtube.com/..." class="w-full"/>
-          </div>
-        </div>
       </div>
 
       <template #footer>
@@ -847,9 +834,18 @@ const downloadAudio = async () => {
 
 // ==================== HELPERS ====================
 const getImageUrl = (ep) => {
-  if (!ep?.image?.storedFilename) return null
-  const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
-  return `${base}/uploads/episodes/images/${ep.image.storedFilename}`
+  // Il backend salva già l'URL completo di B2 in ep.image.url
+  if (ep?.image?.url) {
+    return ep.image.url
+  }
+
+  // Fallback per vecchie immagini locali (se esistenti)
+  if (ep?.image?.storedFilename) {
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
+    return `${base}/uploads/${ep.image.storedFilename}`
+  }
+
+  return null
 }
 const getAudioUrl = (id) => {
   const ep = episodes.value.find(e => e._id === id) || previewEpisode.value

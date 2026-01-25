@@ -1,10 +1,10 @@
 <template>
-  <DashboardLayout page-title="Gestione Shows">
+  <DashboardLayout page-title="Shows Management">
     <template #topbar-actions>
       <!-- Pulsante per creare show solo per admin -->
       <Button
         v-if="!isArtist"
-        label="Nuovo Show"
+        label="New Show"
         icon="pi pi-plus"
         @click="openDialog()"
       />
@@ -72,10 +72,10 @@
           <template #empty>
             <div class="empty-state">
               <i class="pi pi-microphone" style="font-size: 3rem; color: #cbd5e1;"></i>
-              <p>Nessuno show {{ getFilterLabel() }}</p>
+              <p>No shows {{ getFilterLabel() }}</p>
               <Button
                 v-if="!isArtist"
-                label="Crea il primo show"
+                label="Create first show"
                 icon="pi pi-plus"
                 @click="openDialog()"
               />
@@ -85,7 +85,7 @@
           <Column field="title" header="Titolo" sortable style="min-width: 200px;"></Column>
           <Column field="artist.name" header="Artista" sortable></Column>
           <Column field="artist.email" header="Email" sortable></Column>
-          <Column field="genres" header="Generi">
+          <Column field="genres" header="Genres">
             <template #body="slotProps">
               <div class="genres-tags">
                 <Tag
@@ -145,11 +145,11 @@
             </template>
           </Column>
 
-          <!-- Azioni per ADMIN -->
-          <Column v-if="!isArtist" header="Azioni" style="width: 300px;">
+          <!-- Actions for ADMIN -->
+          <Column v-if="!isArtist" header="Actions" style="width: 300px;">
             <template #body="slotProps">
               <div class="action-buttons">
-                <!-- Azioni per richieste pending -->
+                <!-- Actions for pending requests -->
                 <Button
                   v-if="slotProps.data.requestStatus === 'pending'"
                   icon="pi pi-check"
@@ -174,17 +174,17 @@
                   outlined
                   :severity="slotProps.data.audio?.filename ? 'success' : 'secondary'"
                   @click="openAudioDialog(slotProps.data)"
-                  v-tooltip.top="'Gestisci Audio'"
+                  v-tooltip.top="'Manage Audio'"
                 />
 
-                <!-- Azioni standard -->
+                <!-- Standard actions -->
                 <Button
                   icon="pi pi-eye"
                   rounded
                   outlined
                   severity="info"
                   @click="viewShow(slotProps.data)"
-                  v-tooltip.top="'Dettagli'"
+                  v-tooltip.top="'Details'"
                 />
                 <Button
                   icon="pi pi-pencil"
@@ -192,7 +192,7 @@
                   outlined
                   severity="secondary"
                   @click="openDialog(slotProps.data)"
-                  v-tooltip.top="'Modifica'"
+                  v-tooltip.top="'Edit'"
                 />
                 <Button
                   icon="pi pi-trash"
@@ -200,14 +200,14 @@
                   outlined
                   severity="danger"
                   @click="confirmDelete(slotProps.data)"
-                  v-tooltip.top="'Elimina'"
+                  v-tooltip.top="'Delete'"
                 />
               </div>
             </template>
           </Column>
 
-          <!-- Azioni per ARTISTI -->
-          <Column v-else header="Azioni" style="width: 150px;">
+          <!-- Actions for ARTISTS -->
+          <Column v-else header="Actions" style="width: 150px;">
             <template #body="slotProps">
               <div class="action-buttons">
                 <!-- Audio button - solo per show approvati -->
@@ -218,7 +218,7 @@
                   outlined
                   :severity="slotProps.data.audio?.filename ? 'success' : 'secondary'"
                   @click="openAudioDialog(slotProps.data)"
-                  v-tooltip.top="'Gestisci Audio'"
+                  v-tooltip.top="'Manage Audio'"
                 />
                 <Button
                   icon="pi pi-eye"
@@ -226,7 +226,7 @@
                   outlined
                   severity="info"
                   @click="viewShow(slotProps.data)"
-                  v-tooltip.top="'Dettagli'"
+                  v-tooltip.top="'Details'"
                 />
               </div>
             </template>
@@ -238,7 +238,7 @@
     <!-- Dialog Gestione Audio Show -->
     <Dialog
       v-model:visible="audioDialogVisible"
-      header="Gestione Audio Show"
+      header="Show Audio Management"
       :modal="true"
       :style="{ width: '550px' }"
     >
@@ -255,10 +255,10 @@
           :closable="false"
           class="approval-warning"
         >
-          Puoi caricare audio solo per show approvati. Questo show è in stato: {{ getRequestStatusLabel(selectedShowForAudio.requestStatus) }}
+          You can only upload audio for approved shows. This show status is: {{ getRequestStatusLabel(selectedShowForAudio.requestStatus) }}
         </Message>
 
-        <!-- Se c'è già un audio -->
+        <!-- If audio already exists -->
         <div v-if="selectedShowForAudio.audio?.filename" class="current-audio-section">
           <div class="audio-info-card">
             <div class="audio-icon">
@@ -291,7 +291,7 @@
             ></audio>
           </div>
 
-          <!-- Azioni Audio -->
+          <!-- Audio Actions -->
           <div class="audio-actions">
             <Button
               label="Play"
@@ -315,7 +315,7 @@
             />
             <Button
               v-if="canManageAudio"
-              label="Elimina"
+              label="Delete"
               icon="pi pi-trash"
               severity="danger"
               outlined
@@ -329,17 +329,17 @@
           <div class="no-audio-icon">
             <i class="pi pi-volume-off"></i>
           </div>
-          <p>Nessun audio caricato per questo show</p>
+          <p>No audio uploaded for this show</p>
         </div>
 
-        <!-- Upload Section - solo se può gestire l'audio -->
+        <!-- Upload Section - only if can manage audio -->
         <template v-if="canManageAudio">
           <Divider />
 
           <div class="upload-section">
-            <h5>{{ selectedShowForAudio.audio?.filename ? 'Sostituisci Audio' : 'Carica Audio' }}</h5>
+            <h5>{{ selectedShowForAudio.audio?.filename ? 'Replace Audio' : 'Upload Audio' }}</h5>
             <p class="upload-hint">
-              Formati accettati: MP3 | Max 500MB | Min 128kbps | Max 60 minuti
+              Accepted formats: MP3 | Max 500MB | Min 128kbps | Max 60 minutes
             </p>
 
             <div class="file-upload-wrapper">
@@ -352,7 +352,7 @@
                 class="file-input"
               />
               <Button
-                label="Seleziona file MP3"
+                label="Select MP3 file"
                 icon="pi pi-folder-open"
                 severity="secondary"
                 outlined
@@ -373,13 +373,13 @@
                 rounded
                 size="small"
                 @click="clearSelectedFile"
-                v-tooltip.top="'Rimuovi'"
+                v-tooltip.top="'Remove'"
               />
             </div>
 
             <Button
               v-if="selectedAudioFile"
-              label="Carica Audio"
+              label="Upload Audio"
               icon="pi pi-upload"
               @click="uploadAudio"
               :loading="audioUploading"
@@ -390,7 +390,7 @@
           <!-- Progress durante upload -->
           <div v-if="audioUploading" class="upload-progress">
             <ProgressBar :value="uploadProgress" />
-            <p>Caricamento in corso...</p>
+            <p>Upload in progress...</p>
           </div>
         </template>
 
@@ -405,66 +405,66 @@
     <Dialog
       v-if="!isArtist"
       v-model:visible="dialogVisible"
-      :header="editingShow ? 'Modifica Show' : 'Nuovo Show'"
+      :header="editingShow ? 'Edit Show' : 'New Show'"
       :modal="true"
       :style="{ width: '800px' }"
       :maximizable="true"
     >
       <div class="dialog-content">
         <div class="form-section">
-          <h3>Informazioni Show</h3>
+          <h3>Show Information</h3>
 
           <div class="form-field">
             <ImageUpload
-              label="Immagine Copertina Show"
+              label="Show Cover Image"
               v-model="formData.image.url"
             />
           </div>
 
           <div class="form-field">
-            <label for="title">Titolo Show *</label>
+            <label for="title">Show Title *</label>
             <InputText
               id="title"
               v-model="formData.title"
-              placeholder="Es. Noise à Noise"
+              placeholder="E.g. Noise à Noise"
               class="w-full"
             />
           </div>
 
           <div class="form-field">
-            <label for="description">Descrizione *</label>
+            <label for="description">Description *</label>
             <Textarea
               id="description"
               v-model="formData.description"
               rows="5"
-              placeholder="Descrivi lo show..."
+              placeholder="Describe the show..."
               class="w-full"
             />
           </div>
         </div>
 
         <div class="form-section">
-          <h3>Informazioni Artista</h3>
+          <h3>Artist Information</h3>
 
           <div class="form-field">
             <ImageUpload
-              label="Foto Artista"
+              label="Artist Photo"
               v-model="formData.artist.photo"
             />
           </div>
 
           <div class="form-field">
-            <label for="artistName">Nome Artista *</label>
+            <label for="artistName">Artist Name *</label>
             <InputText
               id="artistName"
               v-model="formData.artist.name"
-              placeholder="Nome curatore/artista"
+              placeholder="Curator/artist name"
               class="w-full"
             />
           </div>
 
           <div class="form-field">
-            <label for="artistBio">Bio Artista</label>
+            <label for="artistBio">Artist Bio</label>
             <Textarea
               id="artistBio"
               v-model="formData.artist.bio"
@@ -475,7 +475,7 @@
           </div>
 
           <div class="form-field">
-            <label for="artistEmail">Email Artista</label>
+            <label for="artistEmail">Artist Email</label>
             <InputText
               id="artistEmail"
               v-model="formData.artist.email"
@@ -487,21 +487,21 @@
         </div>
 
         <div class="form-section">
-          <h3>Generi e Tags</h3>
+          <h3>Genres and Tags</h3>
 
           <div class="form-field">
-            <label for="genres">Generi (separati da virgola)</label>
+            <label for="genres">Genres (comma separated)</label>
             <InputText
               id="genres"
               v-model="genresInput"
               placeholder="Ambient, Experimental, Drone"
               class="w-full"
             />
-            <small>Inserisci i generi separati da virgola</small>
+            <small>Enter genres separated by comma</small>
           </div>
 
           <div class="form-field">
-            <label for="tags">Tags (separati da virgola)</label>
+            <label for="tags">Tags (comma separated)</label>
             <InputText
               id="tags"
               v-model="tagsInput"
@@ -512,7 +512,7 @@
         </div>
 
         <div class="form-section">
-          <h3>Impostazioni</h3>
+          <h3>Settings</h3>
 
           <div class="form-row">
             <div class="form-field">
@@ -550,7 +550,7 @@
       </div>
 
       <template #footer>
-        <Button label="Annulla" @click="dialogVisible = false" text />
+        <Button label="Cancel" @click="dialogVisible = false" text />
         <Button
           :label="editingShow ? 'Aggiorna' : 'Crea'"
           @click="saveShow"
@@ -766,8 +766,8 @@ const pauseAudio = () => {
 const handleAudioError = () => {
   toast.add({
     severity: 'error',
-    summary: 'Errore',
-    detail: 'Impossibile caricare il file audio',
+    summary: 'Error',
+    detail: 'Unable to load audio file',
     life: 3000
   })
 }
@@ -792,7 +792,7 @@ const downloadAudio = () => {
   toast.add({
     severity: 'info',
     summary: 'Download',
-    detail: 'Download avviato',
+    detail: 'Download started',
     life: 2000
   })
 }
@@ -810,8 +810,8 @@ const onAudioFileChange = (event) => {
     if (!file.type.includes('audio/mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
       toast.add({
         severity: 'error',
-        summary: 'Formato non valido',
-        detail: 'Seleziona un file MP3',
+        summary: 'Invalid format',
+        detail: 'Select an MP3 file',
         life: 3000
       })
       return
@@ -852,27 +852,27 @@ const uploadAudio = async () => {
       }
     )
 
-    // Aggiorna lo show con i nuovi dati audio
+    // Update show with new audio data
     selectedShowForAudio.value.audio = response.data.audio
 
     toast.add({
       severity: 'success',
-      summary: 'Audio caricato',
-      detail: 'Il file audio è stato caricato con successo',
+      summary: 'Audio uploaded',
+      detail: 'Audio file uploaded successfully',
       life: 3000
     })
 
-    // Aggiorna la lista degli show
+    // Refresh shows list
     await showsStore.fetchShows()
 
     // Reset
     selectedAudioFile.value = null
 
   } catch (error) {
-    console.error('Errore upload audio:', error)
+    console.error('Audio upload error:', error)
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: error.response?.data?.error || 'Errore nel caricamento dell\'audio',
       life: 4000
     })
@@ -884,11 +884,11 @@ const uploadAudio = async () => {
 
 const confirmDeleteAudio = () => {
   confirm.require({
-    message: 'Sei sicuro di voler eliminare questo file audio?',
-    header: 'Conferma Eliminazione',
+    message: 'Are you sure you want to delete this audio file?',
+    header: 'Confirm Deletion',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Sì, elimina',
-    rejectLabel: 'Annulla',
+    acceptLabel: 'Yes, delete',
+    rejectLabel: 'Cancel',
     acceptClass: 'p-button-danger',
     accept: () => deleteAudio()
   })
@@ -912,19 +912,19 @@ const deleteAudio = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Audio eliminato',
-      detail: 'Il file audio è stato eliminato',
+      summary: 'Audio deleted',
+      detail: 'Audio file deleted successfully',
       life: 3000
     })
 
-    // Aggiorna la lista degli show
+    // Refresh shows list
     await showsStore.fetchShows()
 
   } catch (error) {
-    console.error('Errore eliminazione audio:', error)
+    console.error('Audio deletion error:', error)
     toast.add({
       severity: 'error',
-      summary: 'Errore',
+      summary: 'Error',
       detail: error.response?.data?.error || 'Errore nell\'eliminazione dell\'audio',
       life: 3000
     })
@@ -986,8 +986,8 @@ const saveShow = async () => {
   if (!formData.value.title || !formData.value.description || !formData.value.artist.name) {
     toast.add({
       severity: 'warn',
-      summary: 'Attenzione',
-      detail: 'Compila i campi obbligatori (titolo, descrizione, artista)',
+      summary: 'Warning',
+      detail: 'Fill in required fields (title, description, artist)',
       life: 3000
     })
     return
@@ -1019,16 +1019,16 @@ const saveShow = async () => {
       await showsStore.updateShow(editingShow.value._id, showData)
       toast.add({
         severity: 'success',
-        summary: 'Show aggiornato',
-        detail: 'Le modifiche sono state salvate',
+        summary: 'Show updated',
+        detail: 'Changes saved successfully',
         life: 3000
       })
     } else {
       await showsStore.createShow(showData)
       toast.add({
         severity: 'success',
-        summary: 'Show creato',
-        detail: 'Il nuovo show è stato creato con successo',
+        summary: 'Show created',
+        detail: 'New show created successfully',
         life: 3000
       })
     }
@@ -1037,8 +1037,8 @@ const saveShow = async () => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
-      detail: showsStore.error || 'Errore durante il salvataggio',
+      summary: 'Error',
+      detail: showsStore.error || 'Error saving data',
       life: 3000
     })
   }
@@ -1048,7 +1048,7 @@ const viewShow = (show) => {
   const details = `
 Dettagli Show:
 
-Titolo: ${show.title}
+Title: ${show.title}
 Artista: ${show.artist?.name || '-'}
 Email: ${show.artist?.email || '-'}
 Status: ${show.status}
@@ -1068,11 +1068,11 @@ ${show.adminNotes ? `Note Admin:\n${show.adminNotes}` : ''}
 
 const approveRequest = async (show) => {
   confirm.require({
-    message: `Vuoi approvare lo show "${show.title}" di ${show.artist.name}?`,
+    message: `Do you want to approve the show "${show.title}" by ${show.artist.name}?`,
     header: 'Approva Richiesta',
     icon: 'pi pi-check-circle',
-    acceptLabel: 'Sì, approva',
-    rejectLabel: 'Annulla',
+    acceptLabel: 'Yes, approve',
+    rejectLabel: 'Cancel',
     acceptClass: 'p-button-success',
     accept: async () => {
       try {
@@ -1082,8 +1082,8 @@ const approveRequest = async (show) => {
 
         toast.add({
           severity: 'success',
-          summary: 'Show Approvato!',
-          detail: `"${show.title}" è stato approvato e attivato`,
+          summary: 'Show Approved!',
+          detail: `"${show.title}" has been approved and activated`,
           life: 4000
         })
 
@@ -1091,8 +1091,8 @@ const approveRequest = async (show) => {
       } catch (error) {
         toast.add({
           severity: 'error',
-          summary: 'Errore',
-          detail: 'Errore nell\'approvazione',
+          summary: 'Error',
+          detail: 'Error approving show',
           life: 3000
         })
       }
@@ -1101,7 +1101,7 @@ const approveRequest = async (show) => {
 }
 
 const rejectRequest = async (show) => {
-  const rejectReason = prompt(`Motivo del rifiuto per "${show.title}":`, 'Il contenuto non è adatto alla nostra programmazione.')
+  const rejectReason = prompt(`Reason for rejecting "${show.title}":`, 'The content is not suitable for our programming.')
 
   if (!rejectReason) return
 
@@ -1112,8 +1112,8 @@ const rejectRequest = async (show) => {
 
     toast.add({
       severity: 'info',
-      summary: 'Show Rifiutato',
-      detail: `"${show.title}" è stato rifiutato`,
+      summary: 'Show Rejected',
+      detail: `"${show.title}" has been rejected`,
       life: 3000
     })
 
@@ -1121,8 +1121,8 @@ const rejectRequest = async (show) => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
-      detail: 'Errore nel rifiuto',
+      summary: 'Error',
+      detail: 'Error rejecting show',
       life: 3000
     })
   }
@@ -1130,11 +1130,11 @@ const rejectRequest = async (show) => {
 
 const confirmDelete = (show) => {
   confirm.require({
-    message: `Sei sicuro di voler eliminare "${show.title}"?`,
-    header: 'Conferma Eliminazione',
+    message: `Are you sure you want to delete "${show.title}"?`,
+    header: 'Confirm Deletion',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Sì, elimina',
-    rejectLabel: 'Annulla',
+    acceptLabel: 'Yes, delete',
+    rejectLabel: 'Cancel',
     acceptClass: 'p-button-danger',
     accept: () => deleteShow(show)
   })
@@ -1145,15 +1145,15 @@ const deleteShow = async (show) => {
     await showsStore.deleteShow(show._id)
     toast.add({
       severity: 'success',
-      summary: 'Show eliminato',
-      detail: 'Lo show è stato eliminato',
+      summary: 'Show deleted',
+      detail: 'Show deleted successfully',
       life: 3000
     })
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
-      detail: 'Errore durante l\'eliminazione',
+      summary: 'Error',
+      detail: 'Error deleting show',
       life: 3000
     })
   }
@@ -1165,8 +1165,8 @@ onMounted(async () => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Errore',
-      detail: 'Errore nel caricamento degli show',
+      summary: 'Error',
+      detail: 'Error loading shows',
       life: 3000
     })
   }

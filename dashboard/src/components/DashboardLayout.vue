@@ -97,11 +97,6 @@ const toast = useToast()
 // Menu configuration
 const adminMenuItems = [
   {
-    label: 'Dashboard',
-    icon: 'pi pi-home',
-    to: '/dashboard'
-  },
-  {
     label: 'Shows',
     icon: 'pi pi-microphone',
     to: '/shows'
@@ -115,14 +110,6 @@ const adminMenuItems = [
     label: 'Posts',
     icon: 'pi pi-image',
     to: '/admin/posts'
-  },
-    {
-    label: 'Requests',
-    icon: 'pi pi-inbox',
-    to: '/requests',
-    badge: true,
-    badgeValue: computed(() => showsStore.shows.filter(s => s.requestStatus === 'pending').length),
-    badgeSeverity: 'warning'
   },
   {
     label: 'Streaming',

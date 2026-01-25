@@ -2,51 +2,51 @@
   <div class="image-upload">
     <label class="upload-label">{{ label }}</label>
 
-    <!-- Preview Immagine -->
+    <!-- Image Preview -->
     <div class="image-preview" v-if="imageUrl">
       <img :src="imageUrl" :alt="label" />
       <div class="image-overlay">
         <Button
-            icon="pi pi-times"
-            rounded
-            severity="danger"
-            size="small"
-            @click="removeImage"
-            class="remove-btn"
+          icon="pi pi-times"
+          rounded
+          severity="danger"
+          size="small"
+          @click="removeImage"
+          class="remove-btn"
         />
       </div>
     </div>
 
     <!-- Upload Area -->
     <div
-        v-else
-        class="upload-area"
-        :class="{ 'drag-over': isDragging }"
-        @click="triggerFileInput"
-        @drop.prevent="handleDrop"
-        @dragover.prevent="isDragging = true"
-        @dragleave.prevent="isDragging = false"
+      v-else
+      class="upload-area"
+      :class="{ 'drag-over': isDragging }"
+      @click="triggerFileInput"
+      @drop.prevent="handleDrop"
+      @dragover.prevent="isDragging = true"
+      @dragleave.prevent="isDragging = false"
     >
       <i class="pi pi-cloud-upload upload-icon"></i>
       <p class="upload-text">
-        Clicca o trascina un'immagine qui
+        Click or drag an image here
       </p>
       <p class="upload-hint">
         JPG, PNG, GIF, WebP (max 5MB)
       </p>
       <input
-          ref="fileInput"
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp"
-          @change="handleFileSelect"
-          style="display: none;"
+        ref="fileInput"
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        @change="handleFileSelect"
+        style="display: none;"
       />
     </div>
 
     <!-- Loading -->
     <div v-if="uploading" class="upload-progress">
       <ProgressBar mode="indeterminate" style="height: 6px;" />
-      <p>Caricamento in corso...</p>
+      <p>Uploading...</p>
     </div>
 
     <!-- Error -->
@@ -63,7 +63,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
 const props = defineProps({
   label: {
     type: String,
-    default: 'Immagine'
+    default: 'Image'
   },
   modelValue: {
     type: String,
@@ -79,7 +79,7 @@ const uploading = ref(false)
 const error = ref('')
 const isDragging = ref(false)
 
-// Watch per aggiornare l'immagine se cambia dall'esterno
+// Watch to update image if it changes from outside
 watch(() => props.modelValue, (newVal) => {
   imageUrl.value = newVal
 })
@@ -104,14 +104,14 @@ const handleDrop = (event) => {
 }
 
 const uploadImage = async (file) => {
-  // Validazione
+  // Validation
   if (!file.type.startsWith('image/')) {
-    error.value = 'Per favore seleziona un\'immagine'
+    error.value = 'Please select an image'
     return
   }
 
   if (file.size > 5 * 1024 * 1024) {
-    error.value = 'L\'immagine deve essere inferiore a 5MB'
+    error.value = 'Image must be smaller than 5MB'
     return
   }
 
@@ -131,7 +131,7 @@ const uploadImage = async (file) => {
     imageUrl.value = response.data.url
     emit('update:modelValue', response.data.url)
   } catch (err) {
-    error.value = err.response?.data?.error || 'Errore durante l\'upload'
+    error.value = err.response?.data?.error || 'Error during upload'
   } finally {
     uploading.value = false
   }

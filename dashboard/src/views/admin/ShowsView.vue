@@ -136,7 +136,7 @@
           <Column header="Actions" style="width: 300px;">
             <template #body="slotProps">
               <div class="action-buttons">
-                <!-- Azioni per richieste pending -->
+                <!-- Actions for pending requests -->
                 <Button
                   v-if="slotProps.data.requestStatus === 'pending'"
                   icon="pi pi-check"
@@ -164,7 +164,7 @@
                   v-tooltip.top="'Manage Audio'"
                 />
 
-                <!-- Azioni standard -->
+                <!-- Standard actions -->
                 <Button
                   icon="pi pi-eye"
                   rounded
@@ -199,7 +199,7 @@
     <!-- Dialog Gestione Audio Show -->
     <Dialog
       v-model:visible="audioDialogVisible"
-      header="Gestione Audio Show"
+      header="Show Audio Management"
       :modal="true"
       :style="{ width: '550px' }"
     >
@@ -209,7 +209,7 @@
           <p class="artist-name">{{ selectedShowForAudio.artist?.name }}</p>
         </div>
 
-        <!-- Se c'è già un audio -->
+        <!-- If audio already exists -->
         <div v-if="selectedShowForAudio.audio?.filename" class="current-audio-section">
           <div class="audio-info-card">
             <div class="audio-icon">
@@ -239,7 +239,7 @@
             ></audio>
           </div>
 
-          <!-- Azioni Audio -->
+          <!-- Audio Actions -->
           <div class="audio-actions">
             <Button
               label="Play"
@@ -271,21 +271,21 @@
           </div>
         </div>
 
-        <!-- Se non c'è audio -->
+        <!-- If no audio -->
         <div v-else class="no-audio-section">
           <div class="no-audio-icon">
             <i class="pi pi-volume-off"></i>
           </div>
-          <p>Nessun audio caricato per questo show</p>
+          <p>No audio uploaded for this show</p>
         </div>
 
         <!-- Upload Section -->
         <Divider />
 
         <div class="upload-section">
-          <h5>{{ selectedShowForAudio.audio?.filename ? 'Sostituisci Audio' : 'Carica Audio' }}</h5>
+          <h5>{{ selectedShowForAudio.audio?.filename ? 'Replace Audio' : 'Upload Audio' }}</h5>
           <p class="upload-hint">
-            Formati accettati: MP3 | Max 500MB | Min 128kbps | Max 60 minuti
+            Accepted formats: MP3 | Max 500MB | Min 128kbps | Max 60 minutes
           </p>
 
           <div class="file-upload-wrapper">
@@ -298,7 +298,7 @@
               class="file-input"
             />
             <Button
-              label="Seleziona file MP3"
+              label="Select MP3 file"
               icon="pi pi-folder-open"
               severity="secondary"
               outlined
@@ -319,13 +319,13 @@
               rounded
               size="small"
               @click="clearSelectedFile"
-              v-tooltip.top="'Rimuovi'"
+              v-tooltip.top="'Remove'"
             />
           </div>
 
           <Button
             v-if="selectedAudioFile"
-            label="Carica Audio"
+            label="Upload Audio"
             icon="pi pi-upload"
             @click="uploadAudio"
             :loading="audioUploading"
@@ -333,15 +333,15 @@
           />
         </div>
 
-        <!-- Progress durante upload -->
+        <!-- Upload progress -->
         <div v-if="audioUploading" class="upload-progress">
           <ProgressBar :value="uploadProgress" />
-          <p>Caricamento in corso...</p>
+          <p>Upload in progress...</p>
         </div>
       </div>
     </Dialog>
 
-    <!-- Dialog Crea/Modifica Show -->
+    <!-- Create/Edit Show Dialog -->
     <Dialog
       v-model:visible="dialogVisible"
       :header="editingShow ? 'Edit Show' : 'New Show'"
@@ -351,32 +351,32 @@
     >
       <div class="dialog-content">
         <div class="form-section">
-          <h3>Informazioni Show</h3>
+          <h3>Show Information</h3>
 
           <div class="form-field">
             <ImageUpload
-              label="Immagine Copertina Show"
+              label="Show Cover Image"
               v-model="formData.image.url"
             />
           </div>
 
           <div class="form-field">
-            <label for="title">Titolo Show *</label>
+            <label for="title">Show Title *</label>
             <InputText
               id="title"
               v-model="formData.title"
-              placeholder="Es. Noise à Noise"
+              placeholder="E.g. Noise à Noise"
               class="w-full"
             />
           </div>
 
           <div class="form-field">
-            <label for="description">Descrizione *</label>
+            <label for="description">Description *</label>
             <Textarea
               id="description"
               v-model="formData.description"
               rows="5"
-              placeholder="Descrivi lo show..."
+              placeholder="Describe the show..."
               class="w-full"
             />
           </div>
@@ -397,13 +397,13 @@
             <InputText
               id="artistName"
               v-model="formData.artist.name"
-              placeholder="Nome curatore/artista"
+              placeholder="Curator/artist name"
               class="w-full"
             />
           </div>
 
           <div class="form-field">
-            <label for="artistBio">Bio Artista</label>
+            <label for="artistBio">Artist Bio</label>
             <Textarea
               id="artistBio"
               v-model="formData.artist.bio"
@@ -426,10 +426,10 @@
         </div>
 
         <div class="form-section">
-          <h3>Generi e Tags</h3>
+          <h3>Genres and Tags</h3>
 
           <div class="form-field">
-            <label for="genres">Generi (separati da virgola)</label>
+            <label for="genres">Genres (comma separated)</label>
             <InputText
               id="genres"
               v-model="genresInput"
@@ -440,7 +440,7 @@
           </div>
 
           <div class="form-field">
-            <label for="tags">Tags (separati da virgola)</label>
+            <label for="tags">Tags (comma separated)</label>
             <InputText
               id="tags"
               v-model="tagsInput"
@@ -585,7 +585,7 @@
         </div>
 
         <div class="form-section">
-          <h3>Impostazioni</h3>
+          <h3>Settings</h3>
 
           <div class="form-row">
             <div class="form-field">
@@ -871,8 +871,8 @@ const pauseAudio = () => {
 const handleAudioError = () => {
   toast.add({
     severity: 'error',
-    summary: 'Errore',
-    detail: 'Impossibile caricare il file audio',
+    summary: 'Error',
+    detail: 'Unable to load audio file',
     life: 3000
   })
 }
@@ -897,7 +897,7 @@ const downloadAudio = () => {
   toast.add({
     severity: 'info',
     summary: 'Download',
-    detail: 'Download avviato',
+    detail: 'Download started',
     life: 2000
   })
 }
@@ -915,8 +915,8 @@ const onAudioFileChange = (event) => {
     if (!file.type.includes('audio/mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
       toast.add({
         severity: 'error',
-        summary: 'Formato non valido',
-        detail: 'Seleziona un file MP3',
+        summary: 'Invalid format',
+        detail: 'Please select an MP3 file',
         life: 3000
       })
       return
@@ -939,7 +939,7 @@ const uploadAudio = async () => {
   uploadProgress.value = 0
 
   try {
-    // STEP 1: Richiedi URL firmato
+    // STEP 1: Request signed URL
     uploadProgress.value = 5
     const presignRes = await api.post(`/upload/presign/show/${selectedShowForAudio.value._id}`, {
       filename: selectedAudioFile.value.name,
@@ -949,13 +949,13 @@ const uploadAudio = async () => {
     const { presignedUrl, key, fileUrl } = presignRes.data
     uploadProgress.value = 10
 
-    // STEP 2: Upload diretto a B2
+    // STEP 2: Direct upload to B2
     await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
 
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable) {
-          // Progress da 10% a 90%
+          // Progress from 10% to 90%
           uploadProgress.value = 10 + Math.round((e.loaded / e.total) * 80)
         }
       })
@@ -964,19 +964,19 @@ const uploadAudio = async () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve()
         } else {
-          reject(new Error(`Upload fallito: ${xhr.status}`))
+          reject(new Error(`Upload failed: ${xhr.status}`))
         }
       })
 
-      xhr.addEventListener('error', () => reject(new Error('Errore di rete')))
+      xhr.addEventListener('error', () => reject(new Error('Network error')))
       xhr.open('PUT', presignedUrl)
-      // NON impostare Content-Type - deve corrispondere alla firma
+      // DO NOT set Content-Type - must match signature
       xhr.send(selectedAudioFile.value)
     })
 
     uploadProgress.value = 90
 
-    // STEP 3: Ottieni metadata audio
+    // STEP 3: Get audio metadata
     const metadata = await new Promise((resolve) => {
       const audio = new Audio()
       audio.preload = 'metadata'
@@ -993,7 +993,7 @@ const uploadAudio = async () => {
       audio.src = URL.createObjectURL(selectedAudioFile.value)
     })
 
-    // STEP 4: Conferma upload al backend
+    // STEP 4: Confirm upload to backend
     const confirmRes = await api.post(`/upload/confirm/show/${selectedShowForAudio.value._id}`, {
       key,
       fileUrl,
@@ -1005,13 +1005,13 @@ const uploadAudio = async () => {
 
     uploadProgress.value = 100
 
-    // Aggiorna lo show con i nuovi dati audio
+    // Update show with new audio data
     selectedShowForAudio.value.audio = confirmRes.data.audio
 
     toast.add({
       severity: 'success',
-      summary: 'Audio caricato',
-      detail: 'Il file audio è stato caricato con successo',
+      summary: 'Audio uploaded',
+      detail: 'Audio file uploaded successfully',
       life: 3000
     })
 
@@ -1022,11 +1022,11 @@ const uploadAudio = async () => {
     selectedAudioFile.value = null
 
   } catch (error) {
-    console.error('Errore upload audio:', error)
+    console.error('Audio upload error:', error)
     toast.add({
       severity: 'error',
-      summary: 'Errore',
-      detail: error.response?.data?.error || error.message || 'Errore nel caricamento dell\'audio',
+      summary: 'Error',
+      detail: error.response?.data?.error || error.message || 'Error uploading audio',
       life: 4000
     })
   } finally {
@@ -1037,11 +1037,11 @@ const uploadAudio = async () => {
 
 const confirmDeleteAudio = () => {
   confirm.require({
-    message: 'Sei sicuro di voler eliminare questo file audio?',
-    header: 'Conferma Eliminazione',
+    message: 'Are you sure you want to delete this audio file?',
+    header: 'Confirm Deletion',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Sì, elimina',
-    rejectLabel: 'Annulla',
+    acceptLabel: 'Yes, delete',
+    rejectLabel: 'Cancel',
     acceptClass: 'p-button-danger',
     accept: () => deleteAudio()
   })
@@ -1065,8 +1065,8 @@ const deleteAudio = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Audio eliminato',
-      detail: 'Il file audio è stato eliminato',
+      summary: 'Audio deleted',
+      detail: 'Audio file deleted successfully',
       life: 3000
     })
 
@@ -1074,11 +1074,11 @@ const deleteAudio = async () => {
     await showsStore.fetchShows()
 
   } catch (error) {
-    console.error('Errore eliminazione audio:', error)
+    console.error('Audio deletion error:', error)
     toast.add({
       severity: 'error',
-      summary: 'Errore',
-      detail: error.response?.data?.error || 'Errore nell\'eliminazione dell\'audio',
+      summary: 'Error',
+      detail: error.response?.data?.error || 'Error deleting audio',
       life: 3000
     })
   }
@@ -1150,8 +1150,8 @@ const saveShow = async () => {
   if (!formData.value.title || !formData.value.description || !formData.value.artist.name) {
     toast.add({
       severity: 'warn',
-      summary: 'Attenzione',
-      detail: 'Compila i campi obbligatori (titolo, descrizione, artista)',
+      summary: 'Warning',
+      detail: 'Fill in required fields (title, description, artist)',
       life: 3000
     })
     return
@@ -1188,16 +1188,16 @@ const saveShow = async () => {
       await showsStore.updateShow(editingShow.value._id, showData)
       toast.add({
         severity: 'success',
-        summary: 'Show aggiornato',
-        detail: 'Le modifiche sono state salvate',
+        summary: 'Show updated',
+        detail: 'Changes saved successfully',
         life: 3000
       })
     } else {
       await showsStore.createShow(showData)
       toast.add({
         severity: 'success',
-        summary: 'Show creato',
-        detail: 'Il nuovo show è stato creato con successo',
+        summary: 'Show created',
+        detail: 'New show created successfully',
         life: 3000
       })
     }
@@ -1207,34 +1207,34 @@ const saveShow = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: showsStore.error || 'Errore durante il salvataggio',
+      detail: showsStore.error || 'Error saving data',
       life: 3000
     })
   }
 }
 
 const viewShow = (show) => {
-  alert(`Dettagli show:\n\nTitolo: ${show.title}\nSlug: ${show.slug}\nStatus: ${show.status}\nRequest Status: ${show.requestStatus}`)
+  alert(`Show Details:\n\nTitle: ${show.title}\nSlug: ${show.slug}\nStatus: ${show.status}\nRequest Status: ${show.requestStatus}`)
 }
 
 const approveRequest = async (show) => {
   confirm.require({
-    message: `Vuoi approvare lo show "${show.title}" di ${show.artist.name}?`,
+    message: `Do you want to approve the show "${show.title}" by ${show.artist.name}?`,
     header: 'Approve Request',
     icon: 'pi pi-check-circle',
-    acceptLabel: 'Sì, approva',
+    acceptLabel: 'Yes, approve',
     rejectLabel: 'Cancel',
     acceptClass: 'p-button-success',
     accept: async () => {
       try {
         await api.put(`${API_URL}/shows/admin/${show._id}/approve`, {
-          adminNote: 'Show approvato! Benvenuto su BUG Radio 🎵'
+          adminNote: 'Show approved! Welcome to BUG Radio 🎵'
         })
 
         toast.add({
           severity: 'success',
           summary: 'Show Approved!',
-          detail: `"${show.title}" è stato approvato e attivato`,
+          detail: `"${show.title}" has been approved and activated`,
           life: 4000
         })
 
@@ -1243,7 +1243,7 @@ const approveRequest = async (show) => {
         toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Errore nell\'approvazione',
+          detail: 'Error approving show',
           life: 3000
         })
       }
@@ -1252,7 +1252,7 @@ const approveRequest = async (show) => {
 }
 
 const rejectRequest = async (show) => {
-  const rejectReason = prompt(`Motivo del rifiuto per "${show.title}":`, 'Il contenuto non è adatto alla nostra programmazione.')
+  const rejectReason = prompt(`Reason for rejecting "${show.title}":`, 'The content is not suitable for our programming.')
 
   if (!rejectReason) return
 
@@ -1264,7 +1264,7 @@ const rejectRequest = async (show) => {
     toast.add({
       severity: 'info',
       summary: 'Show Rejected',
-      detail: `"${show.title}" è stato rifiutato`,
+      detail: `"${show.title}" has been rejected`,
       life: 3000
     })
 
@@ -1273,7 +1273,7 @@ const rejectRequest = async (show) => {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Errore nel rifiuto',
+      detail: 'Error rejecting show',
       life: 3000
     })
   }
@@ -1281,10 +1281,10 @@ const rejectRequest = async (show) => {
 
 const confirmDelete = (show) => {
   confirm.require({
-    message: `Sei sicuro di voler eliminare "${show.title}"?`,
+    message: `Are you sure you want to delete "${show.title}"?`,
     header: 'Confirm Deletion',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Sì, elimina',
+    acceptLabel: 'Yes, delete',
     rejectLabel: 'Cancel',
     acceptClass: 'p-button-danger',
     accept: () => deleteShow(show)
@@ -1296,15 +1296,15 @@ const deleteShow = async (show) => {
     await showsStore.deleteShow(show._id)
     toast.add({
       severity: 'success',
-      summary: 'Show eliminato',
-      detail: 'Lo show è stato eliminato',
+      summary: 'Show deleted',
+      detail: 'Show deleted successfully',
       life: 3000
     })
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Errore durante l\'eliminazione',
+      detail: 'Error deleting show',
       life: 3000
     })
   }
@@ -1317,7 +1317,7 @@ onMounted(async () => {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Errore nel caricamento degli show',
+      detail: 'Error loading shows',
       life: 3000
     })
   }

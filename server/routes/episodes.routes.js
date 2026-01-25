@@ -7,6 +7,12 @@ const { b2, B2_BUCKET, B2_BASE_URL } = require('../config/backblaze');
 const multer = require('multer');
 const musicMetadata = require('music-metadata');
 const { uploadToMixcloud, getMixcloudEmbedUrl } = require('../services/mixcloudService');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { promisify } = require('util');
+const stream = require('stream');
+const pipeline = promisify(stream.pipeline);
 
 // Multer per gestire file in memoria
 const upload = multer({
@@ -59,6 +65,43 @@ const deleteFromB2 = async (filename) => {
     };
 
     await b2.deleteObject(params).promise();
+};
+
+/**
+ * Scarica temporaneamente file audio da B2 per upload a Mixcloud
+ * @param {string} b2Key - Chiave del file su B2
+ * @returns {Promise<{path: string, cleanup: Function}>}
+ */
+const downloadFromB2Temp = async (b2Key) => {
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, `mixcloud_${Date.now()}.mp3`);
+
+    console.log(`📥 Scarico file da B2: ${b2Key}`);
+
+    const params = {
+        Bucket: B2_BUCKET,
+        Key: b2Key
+    };
+
+    const readStream = b2.getObject(params).createReadStream();
+    const writeStream = fs.createWriteStream(tempFilePath);
+
+    await pipeline(readStream, writeStream);
+
+    console.log(`✔ File scaricato temporaneamente: ${tempFilePath}`);
+
+    // Ritorna path e funzione per cleanup
+    return {
+        path: tempFilePath,
+        cleanup: async () => {
+            try {
+                await fs.promises.unlink(tempFilePath);
+                console.log(`🗑️ File temporaneo eliminato: ${tempFilePath}`);
+            } catch (err) {
+                console.warn('Errore eliminazione file temporaneo:', err.message);
+            }
+        }
+    };
 };
 
 // ==================== HELPER: Permission Functions ====================
@@ -614,6 +657,8 @@ router.delete('/:id/image', authMiddleware, async (req, res) => {
  * POST /api/episodes/:id/publish-mixcloud
  */
 router.post('/:id/publish-mixcloud', authMiddleware, adminMiddleware, async (req, res) => {
+    let tempFile = null;
+
     try {
         const episode = await Episode.findById(req.params.id)
             .populate('showId', 'title slug image tags');
@@ -635,8 +680,8 @@ router.post('/:id/publish-mixcloud', authMiddleware, adminMiddleware, async (req
             });
         }
 
-        if (!episode.audioFile || !episode.audioFile.url) {
-            return res.status(400).json({ error: 'Episodio senza file audio' });
+        if (!episode.audioFile || !episode.audioFile.url || !episode.audioFile.b2Key) {
+            return res.status(400).json({ error: 'Episodio senza file audio valido' });
         }
 
         episode.mixcloud = {
@@ -647,7 +692,18 @@ router.post('/:id/publish-mixcloud', authMiddleware, adminMiddleware, async (req
         };
         await episode.save();
 
-        const result = await uploadToMixcloud(episode, episode.showId);
+        // Scarica temporaneamente il file da B2
+        console.log('📥 Download file da B2 per upload Mixcloud...');
+        tempFile = await downloadFromB2Temp(episode.audioFile.b2Key);
+
+        // Passa il path del file temporaneo a uploadToMixcloud
+        const result = await uploadToMixcloud(episode, episode.showId, tempFile.path);
+
+        // Pulisci il file temporaneo
+        if (tempFile) {
+            await tempFile.cleanup();
+            tempFile = null;
+        }
 
         if (result.success) {
             episode.mixcloud = {
@@ -687,6 +743,15 @@ router.post('/:id/publish-mixcloud', authMiddleware, adminMiddleware, async (req
 
     } catch (error) {
         console.error('Errore pubblicazione Mixcloud:', error);
+
+        // Pulisci file temporaneo in caso di errore
+        if (tempFile) {
+            try {
+                await tempFile.cleanup();
+            } catch (e) {
+                console.warn('Errore cleanup file temporaneo:', e.message);
+            }
+        }
 
         try {
             await Episode.findByIdAndUpdate(req.params.id, {

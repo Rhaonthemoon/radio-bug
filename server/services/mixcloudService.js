@@ -46,31 +46,39 @@ const downloadImage = async (imageUrl) => {
  *
  * @param {Object} episode - Documento Episode con audioFile e opzionalmente image
  * @param {Object} show - Documento Show con image e tags (fallback)
+ * @param {String} audioFilePath - Path del file audio locale (scaricato temporaneamente da B2)
  * @returns {Object} - { success, key, url, error }
  */
-const uploadToMixcloud = async (episode, show) => {
+const uploadToMixcloud = async (episode, show, audioFilePath) => {
     if (!MIXCLOUD_ACCESS_TOKEN) {
         return { success: false, error: 'MIXCLOUD_ACCESS_TOKEN non configurato' };
     }
 
-    if (!episode.audioFile || !episode.audioFile.path) {
-        return { success: false, error: 'Episodio senza file audio' };
+    // Verifica che sia stato fornito il path del file
+    if (!audioFilePath) {
+        return { success: false, error: 'Path del file audio non fornito' };
     }
 
-    if (!fs.existsSync(episode.audioFile.path)) {
-        return { success: false, error: 'File audio non trovato sul server' };
+    // Verifica che il file esista
+    if (!fs.existsSync(audioFilePath)) {
+        return { success: false, error: `File audio non trovato: ${audioFilePath}` };
     }
+
+    console.log(`📁 File audio da caricare: ${audioFilePath}`);
 
     try {
         const FormData = (await import('form-data')).default;
         const axios = require('axios');
         const form = new FormData();
 
-        // File MP3
-        form.append('mp3', fs.createReadStream(episode.audioFile.path), {
-            filename: episode.audioFile.filename || 'episode.mp3',
+        // File MP3 - usa il path fornito
+        const audioFileName = episode.audioFile?.filename || path.basename(audioFilePath) || 'episode.mp3';
+        form.append('mp3', fs.createReadStream(audioFilePath), {
+            filename: audioFileName,
             contentType: 'audio/mpeg'
         });
+
+        console.log(`🎵 Caricamento audio: ${audioFileName}`);
 
         // Campi obbligatori
         form.append('name', episode.title);
@@ -91,20 +99,28 @@ const uploadToMixcloud = async (episode, show) => {
         }
 
         // Immagine: priorità episodio, fallback show
-        if (episode.image?.exists && episode.image.path && fs.existsSync(episode.image.path)) {
-            console.log(`📷 Usando immagine episodio: ${episode.image.filename}`);
-            form.append('picture', fs.createReadStream(episode.image.path), {
-                filename: episode.image.filename || 'cover.jpg',
-                contentType: episode.image.mimetype || 'image/jpeg'
-            });
+        // Con il nuovo sistema B2, le immagini sono su URL, non path locali
+        let imageUrl = null;
+
+        if (episode.image?.exists && episode.image.url) {
+            console.log(`📷 Usando immagine episodio da URL: ${episode.image.url}`);
+            imageUrl = episode.image.url;
         } else if (show.image?.url) {
-            console.log(`📷 Usando immagine show: ${show.image.url}`);
-            const imageBuffer = await downloadImage(show.image.url);
+            console.log(`📷 Usando immagine show da URL: ${show.image.url}`);
+            imageUrl = show.image.url;
+        }
+
+        // Scarica e allega l'immagine se disponibile
+        if (imageUrl) {
+            const imageBuffer = await downloadImage(imageUrl);
             if (imageBuffer) {
                 form.append('picture', imageBuffer, {
                     filename: 'cover.jpg',
                     contentType: 'image/jpeg'
                 });
+                console.log('✔ Immagine allegata al form');
+            } else {
+                console.warn('⚠️ Impossibile scaricare immagine, procedo senza');
             }
         }
 
