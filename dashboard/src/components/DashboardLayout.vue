@@ -133,6 +133,11 @@ const artistMenuItems = [
     label: 'Request Show',
     icon: 'pi pi-plus-circle',
     to: '/artist/request'
+  },
+  {
+    label: 'Show',
+    icon: 'pi pi-plus-circle',
+    to: '/artist/show'
   }
 ]
 

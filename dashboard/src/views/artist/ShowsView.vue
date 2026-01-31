@@ -3,15 +3,12 @@
     <template #topbar-actions>
       <!-- Pulsante per creare show solo per admin -->
       <Button
-        v-if="!isArtist"
+        v-if="isAdmin"
         label="New Show"
         icon="pi pi-plus"
         @click="openDialog()"
       />
       <!-- Messaggio per artisti -->
-      <Message v-else severity="info" :closable="false" style="margin: 0;">
-        Shows are managed by admin. You can only view them.
-      </Message>
     </template>
 
     <!-- Filters -->
@@ -74,7 +71,7 @@
               <i class="pi pi-microphone" style="font-size: 3rem; color: #cbd5e1;"></i>
               <p>No shows {{ getFilterLabel() }}</p>
               <Button
-                v-if="!isArtist"
+                v-if="isAdmin"
                 label="Create first show"
                 icon="pi pi-plus"
                 @click="openDialog()"
@@ -146,7 +143,7 @@
           </Column>
 
           <!-- Actions for ADMIN -->
-          <Column v-if="!isArtist" header="Actions" style="width: 300px;">
+          <Column v-if="isAdmin" header="Actions" style="width: 300px;">
             <template #body="slotProps">
               <div class="action-buttons">
                 <!-- Actions for pending requests -->
@@ -191,7 +188,7 @@
                   rounded
                   outlined
                   severity="secondary"
-                  @click="openDialog(slotProps.data)"
+                  @click="openEditDialog(slotProps.data)"
                   v-tooltip.top="'Edit'"
                 />
                 <Button
@@ -207,7 +204,7 @@
           </Column>
 
           <!-- Actions for ARTISTS -->
-          <Column v-else header="Actions" style="width: 150px;">
+          <Column v-else header="Actions" style="width: 200px;">
             <template #body="slotProps">
               <div class="action-buttons">
                 <!-- Audio button - solo per show approvati -->
@@ -228,12 +225,301 @@
                   @click="viewShow(slotProps.data)"
                   v-tooltip.top="'Details'"
                 />
+                <!-- Edit button for artists - possono editare solo i propri show -->
+                <Button
+                  icon="pi pi-pencil"
+                  rounded
+                  outlined
+                  severity="secondary"
+                  @click="openEditDialog(slotProps.data)"
+                  v-tooltip.top="'Edit'"
+                />
               </div>
             </template>
           </Column>
         </DataTable>
       </template>
     </Card>
+
+    <!-- Dialog Create/Edit Show -->
+    <Dialog
+      v-model:visible="editDialogVisible"
+      :header="editMode ? (isArtist ? 'Edit Your Show' : 'Edit Show') : 'Create New Show'"
+      :modal="true"
+      :style="{ width: '800px' }"
+      :closable="!formSubmitting"
+      :closeOnEscape="!formSubmitting"
+    >
+      <div class="dialog-content">
+        <!-- Messaggio per artisti -->
+        <Message v-if="isArtist && editMode" severity="info" :closable="false" style="margin-bottom: 1.5rem;">
+          You can edit your show details. Status changes require admin approval.
+        </Message>
+
+        <form @submit.prevent="handleSubmit">
+          <!-- Basic Information Section -->
+          <div class="form-section">
+            <h3>Basic Information</h3>
+
+            <div class="form-field">
+              <label for="title">Show Title *</label>
+              <InputText
+                id="title"
+                v-model="showForm.title"
+                placeholder="Enter show title"
+                :disabled="formSubmitting"
+                class="w-full"
+                :class="{ 'p-invalid': formErrors.title }"
+              />
+              <small v-if="formErrors.title" class="p-error">{{ formErrors.title }}</small>
+            </div>
+
+            <div class="form-field">
+              <label for="description">Description *</label>
+              <Textarea
+                id="description"
+                v-model="showForm.description"
+                placeholder="Describe your show"
+                rows="4"
+                :disabled="formSubmitting"
+                class="w-full"
+                :class="{ 'p-invalid': formErrors.description }"
+              />
+              <small v-if="formErrors.description" class="p-error">{{ formErrors.description }}</small>
+            </div>
+
+            <!-- Campo Artist - SOLO PER ADMIN in creazione -->
+            <div v-if="isAdmin && !editMode" class="form-field">
+              <label for="artist">Artist *</label>
+              <Dropdown
+                id="artist"
+                v-model="showForm.artistId"
+                :options="artists"
+                optionLabel="name"
+                optionValue="_id"
+                placeholder="Select artist"
+                :disabled="formSubmitting"
+                class="w-full"
+                :class="{ 'p-invalid': formErrors.artistId }"
+                filter
+                showClear
+              >
+                <template #value="slotProps">
+                  <div v-if="slotProps.value" class="flex align-items-center">
+                    <div>{{ getArtistName(slotProps.value) }}</div>
+                  </div>
+                  <span v-else>{{ slotProps.placeholder }}</span>
+                </template>
+                <template #option="slotProps">
+                  <div class="flex align-items-center">
+                    <div>
+                      <div>{{ slotProps.option.name }}</div>
+                      <small class="text-muted">{{ slotProps.option.email }}</small>
+                    </div>
+                  </div>
+                </template>
+              </Dropdown>
+              <small v-if="formErrors.artistId" class="p-error">{{ formErrors.artistId }}</small>
+            </div>
+
+            <!-- Info per artisti e admin in edit -->
+            <div v-if="editMode || isArtist" class="form-field">
+              <label>Artist</label>
+              <div style="padding: 0.75rem; background: #f9fafb; border-radius: 6px; color: #6b7280;">
+                {{ showForm.artistName || 'Artist information' }}
+              </div>
+              <small>Artist cannot be changed</small>
+            </div>
+
+            <div class="form-field">
+              <label for="genres">Genres *</label>
+              <MultiSelect
+                id="genres"
+                v-model="showForm.genres"
+                :options="availableGenres"
+                placeholder="Select genres"
+                :disabled="formSubmitting"
+                class="w-full"
+                :class="{ 'p-invalid': formErrors.genres }"
+                :maxSelectedLabels="3"
+                filter
+              />
+              <small v-if="formErrors.genres" class="p-error">{{ formErrors.genres }}</small>
+            </div>
+          </div>
+
+          <!-- Show Details Section -->
+          <div class="form-section">
+            <h3>Show Details</h3>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="frequency">Frequency</label>
+                <InputText
+                  id="frequency"
+                  v-model="showForm.frequency"
+                  placeholder="e.g., Weekly, Bi-weekly"
+                  :disabled="formSubmitting"
+                  class="w-full"
+                />
+                <small>How often this show airs</small>
+              </div>
+
+              <div class="form-field">
+                <label for="duration">Duration</label>
+                <InputText
+                  id="duration"
+                  v-model="showForm.duration"
+                  placeholder="e.g., 2 hours"
+                  :disabled="formSubmitting"
+                  class="w-full"
+                />
+                <small>Typical duration of the show</small>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="broadcastDay">Broadcast Day</label>
+              <Dropdown
+                id="broadcastDay"
+                v-model="showForm.broadcastDay"
+                :options="daysOfWeek"
+                placeholder="Select day"
+                :disabled="formSubmitting"
+                class="w-full"
+                showClear
+              />
+              <small>Main broadcast day</small>
+            </div>
+
+            <div class="form-field">
+              <label for="broadcastTime">Broadcast Time</label>
+              <InputText
+                id="broadcastTime"
+                v-model="showForm.broadcastTime"
+                placeholder="e.g., 18:00 - 20:00"
+                :disabled="formSubmitting"
+                class="w-full"
+              />
+              <small>Time slot for the show</small>
+            </div>
+          </div>
+
+          <!-- Status Section - SOLO PER ADMIN -->
+          <div v-if="isAdmin" class="form-section">
+            <h3>Status & Settings</h3>
+
+            <div class="form-field">
+              <label for="status">Show Status *</label>
+              <Dropdown
+                id="status"
+                v-model="showForm.status"
+                :options="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select status"
+                :disabled="formSubmitting"
+                class="w-full"
+                :class="{ 'p-invalid': formErrors.status }"
+              />
+              <small v-if="formErrors.status" class="p-error">{{ formErrors.status }}</small>
+            </div>
+
+            <div class="form-field">
+              <label for="requestStatus">Request Status *</label>
+              <Dropdown
+                id="requestStatus"
+                v-model="showForm.requestStatus"
+                :options="requestStatusOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select request status"
+                :disabled="formSubmitting"
+                class="w-full"
+                :class="{ 'p-invalid': formErrors.requestStatus }"
+              />
+              <small v-if="formErrors.requestStatus" class="p-error">{{ formErrors.requestStatus }}</small>
+            </div>
+
+            <div class="checkbox-field">
+              <Checkbox
+                id="featured"
+                v-model="showForm.featured"
+                :binary="true"
+                :disabled="formSubmitting"
+              />
+              <label for="featured">Featured Show</label>
+            </div>
+          </div>
+
+          <!-- Social Media Section -->
+          <div class="form-section">
+            <h3>Social Media & Links</h3>
+
+            <div class="form-field">
+              <label for="socialMedia.facebook">Facebook</label>
+              <InputText
+                id="socialMedia.facebook"
+                v-model="showForm.socialMedia.facebook"
+                placeholder="Facebook URL"
+                :disabled="formSubmitting"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="socialMedia.instagram">Instagram</label>
+              <InputText
+                id="socialMedia.instagram"
+                v-model="showForm.socialMedia.instagram"
+                placeholder="Instagram URL"
+                :disabled="formSubmitting"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="socialMedia.twitter">Twitter</label>
+              <InputText
+                id="socialMedia.twitter"
+                v-model="showForm.socialMedia.twitter"
+                placeholder="Twitter URL"
+                :disabled="formSubmitting"
+                class="w-full"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="socialMedia.website">Website</label>
+              <InputText
+                id="socialMedia.website"
+                v-model="showForm.socialMedia.website"
+                placeholder="Website URL"
+                :disabled="formSubmitting"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="form-actions">
+            <Button
+              label="Cancel"
+              severity="secondary"
+              outlined
+              @click="closeEditDialog"
+              :disabled="formSubmitting"
+            />
+            <Button
+              type="submit"
+              :label="editMode ? 'Update Show' : 'Create Show'"
+              :loading="formSubmitting"
+              :disabled="formSubmitting"
+            />
+          </div>
+        </form>
+      </div>
+    </Dialog>
 
     <!-- Dialog Gestione Audio Show -->
     <Dialog
@@ -322,245 +608,265 @@
               @click="confirmDeleteAudio"
             />
           </div>
-        </div>
 
-        <!-- Se non c'è audio -->
-        <div v-else class="no-audio-section">
-          <div class="no-audio-icon">
-            <i class="pi pi-volume-off"></i>
-          </div>
-          <p>No audio uploaded for this show</p>
-        </div>
-
-        <!-- Upload Section - only if can manage audio -->
-        <template v-if="canManageAudio">
-          <Divider />
-
-          <div class="upload-section">
-            <h5>{{ selectedShowForAudio.audio?.filename ? 'Replace Audio' : 'Upload Audio' }}</h5>
-            <p class="upload-hint">
-              Accepted formats: MP3 | Max 500MB | Min 128kbps | Max 60 minutes
-            </p>
+          <!-- Replace Audio Section (only if user can manage) -->
+          <div v-if="canManageAudio" class="upload-section">
+            <h5>Replace Audio</h5>
+            <p class="upload-hint">Select a new audio file to replace the current one</p>
 
             <div class="file-upload-wrapper">
               <input
+                ref="audioFileInputRef"
                 type="file"
-                ref="audioFileInput"
-                accept="audio/mp3,audio/mpeg"
-                @change="onAudioFileChange"
-                :disabled="audioUploading"
+                accept="audio/*"
+                @change="handleAudioFileSelect"
                 class="file-input"
               />
               <Button
-                label="Select MP3 file"
-                icon="pi pi-folder-open"
+                label="Select New Audio File"
+                icon="pi pi-file"
                 severity="secondary"
                 outlined
-                @click="triggerFileInput"
-                :disabled="audioUploading"
                 class="select-file-button"
+                @click="triggerAudioFileInput"
+                :disabled="audioUploading"
               />
             </div>
 
             <div v-if="selectedAudioFile" class="selected-file-info">
-              <i class="pi pi-file"></i>
+              <i class="pi pi-file-audio"></i>
               <span>{{ selectedAudioFile.name }}</span>
               <span class="file-size">({{ formatFileSize(selectedAudioFile.size) }})</span>
-              <Button
-                icon="pi pi-times"
-                severity="danger"
-                text
-                rounded
-                size="small"
-                @click="clearSelectedFile"
-                v-tooltip.top="'Remove'"
+            </div>
+
+            <Button
+              v-if="selectedAudioFile"
+              label="Upload New Audio"
+              icon="pi pi-upload"
+              class="upload-button"
+              @click="handleAudioUpload"
+              :loading="audioUploading"
+              :disabled="audioUploading"
+            />
+
+            <div v-if="audioUploading" class="upload-progress">
+              <ProgressBar :value="uploadProgress" />
+              <p>Uploading... {{ uploadProgress }}%</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- If no audio exists -->
+        <div v-else class="no-audio-section">
+          <div class="no-audio-icon">
+            <i class="pi pi-volume-off"></i>
+          </div>
+          <p>No audio file uploaded yet</p>
+
+          <!-- Upload Section (only if user can manage and show is approved) -->
+          <div v-if="canManageAudio" class="upload-section">
+            <h5>Upload Audio</h5>
+            <p class="upload-hint">Supported formats: MP3, WAV, OGG. Max size: 200MB</p>
+
+            <div class="file-upload-wrapper">
+              <input
+                ref="audioFileInputRef"
+                type="file"
+                accept="audio/*"
+                @change="handleAudioFileSelect"
+                class="file-input"
               />
+              <Button
+                label="Select Audio File"
+                icon="pi pi-file"
+                severity="primary"
+                outlined
+                class="select-file-button"
+                @click="triggerAudioFileInput"
+                :disabled="audioUploading"
+              />
+            </div>
+
+            <div v-if="selectedAudioFile" class="selected-file-info">
+              <i class="pi pi-file-audio"></i>
+              <span>{{ selectedAudioFile.name }}</span>
+              <span class="file-size">({{ formatFileSize(selectedAudioFile.size) }})</span>
             </div>
 
             <Button
               v-if="selectedAudioFile"
               label="Upload Audio"
               icon="pi pi-upload"
-              @click="uploadAudio"
-              :loading="audioUploading"
               class="upload-button"
+              @click="handleAudioUpload"
+              :loading="audioUploading"
+              :disabled="audioUploading"
             />
+
+            <div v-if="audioUploading" class="upload-progress">
+              <ProgressBar :value="uploadProgress" />
+              <p>Uploading... {{ uploadProgress }}%</p>
+            </div>
           </div>
 
-          <!-- Progress durante upload -->
-          <div v-if="audioUploading" class="upload-progress">
-            <ProgressBar :value="uploadProgress" />
-            <p>Upload in progress...</p>
+          <!-- Message for artists with unapproved shows -->
+          <div v-else-if="isArtist" class="no-upload-message">
+            <p>Audio upload is only available for approved shows</p>
           </div>
-        </template>
-
-        <!-- Messaggio se artista non può gestire -->
-        <div v-else-if="isArtist && selectedShowForAudio.requestStatus !== 'approved'" class="no-upload-message">
-          <p>Potrai caricare l'audio una volta che lo show sarà approvato.</p>
         </div>
       </div>
     </Dialog>
 
-    <!-- Dialog Crea/Modifica Show (SOLO ADMIN) -->
+    <!-- View Dialog -->
     <Dialog
-      v-if="!isArtist"
-      v-model:visible="dialogVisible"
-      :header="editingShow ? 'Edit Show' : 'New Show'"
+      v-model:visible="viewDialogVisible"
+      header="Show Details"
       :modal="true"
-      :style="{ width: '800px' }"
-      :maximizable="true"
+      :style="{ width: '700px' }"
     >
-      <div class="dialog-content">
-        <div class="form-section">
-          <h3>Show Information</h3>
-
-          <div class="form-field">
-            <ImageUpload
-              label="Show Cover Image"
-              v-model="formData.image.url"
-            />
+      <div v-if="selectedShow" class="view-dialog-content">
+        <div class="detail-section">
+          <h3>Basic Information</h3>
+          <div class="detail-row">
+            <span class="detail-label">Title:</span>
+            <span class="detail-value">{{ selectedShow.title }}</span>
           </div>
-
-          <div class="form-field">
-            <label for="title">Show Title *</label>
-            <InputText
-              id="title"
-              v-model="formData.title"
-              placeholder="E.g. Noise à Noise"
-              class="w-full"
-            />
+          <div class="detail-row">
+            <span class="detail-label">Description:</span>
+            <span class="detail-value">{{ selectedShow.description }}</span>
           </div>
-
-          <div class="form-field">
-            <label for="description">Description *</label>
-            <Textarea
-              id="description"
-              v-model="formData.description"
-              rows="5"
-              placeholder="Describe the show..."
-              class="w-full"
-            />
+          <div class="detail-row">
+            <span class="detail-label">Artist:</span>
+            <span class="detail-value">{{ selectedShow.artist?.name }} ({{ selectedShow.artist?.email }})</span>
           </div>
-        </div>
-
-        <div class="form-section">
-          <h3>Artist Information</h3>
-
-          <div class="form-field">
-            <ImageUpload
-              label="Artist Photo"
-              v-model="formData.artist.photo"
-            />
-          </div>
-
-          <div class="form-field">
-            <label for="artistName">Artist Name *</label>
-            <InputText
-              id="artistName"
-              v-model="formData.artist.name"
-              placeholder="Curator/artist name"
-              class="w-full"
-            />
-          </div>
-
-          <div class="form-field">
-            <label for="artistBio">Artist Bio</label>
-            <Textarea
-              id="artistBio"
-              v-model="formData.artist.bio"
-              rows="3"
-              placeholder="Biografia dell'artista..."
-              class="w-full"
-            />
-          </div>
-
-          <div class="form-field">
-            <label for="artistEmail">Artist Email</label>
-            <InputText
-              id="artistEmail"
-              v-model="formData.artist.email"
-              type="email"
-              placeholder="email@example.com"
-              class="w-full"
-            />
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h3>Genres and Tags</h3>
-
-          <div class="form-field">
-            <label for="genres">Genres (comma separated)</label>
-            <InputText
-              id="genres"
-              v-model="genresInput"
-              placeholder="Ambient, Experimental, Drone"
-              class="w-full"
-            />
-            <small>Enter genres separated by comma</small>
-          </div>
-
-          <div class="form-field">
-            <label for="tags">Tags (comma separated)</label>
-            <InputText
-              id="tags"
-              v-model="tagsInput"
-              placeholder="underground, electronic, live"
-              class="w-full"
-            />
-          </div>
-        </div>
-
-        <div class="form-section">
-          <h3>Settings</h3>
-
-          <div class="form-row">
-            <div class="form-field">
-              <label for="requestStatus">Status Richiesta</label>
-              <Dropdown
-                id="requestStatus"
-                v-model="formData.requestStatus"
-                :options="requestStatusOptions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleziona status"
-                class="w-full"
-              />
-            </div>
-
-            <div class="form-field">
-              <label for="status">Status Show</label>
-              <Dropdown
-                id="status"
-                v-model="formData.status"
-                :options="statusOptions"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleziona status"
-                class="w-full"
+          <div class="detail-row">
+            <span class="detail-label">Genres:</span>
+            <div class="genres-tags">
+              <Tag
+                v-for="genre in selectedShow.genres"
+                :key="genre"
+                :value="genre"
+                severity="info"
               />
             </div>
           </div>
+        </div>
 
-          <div class="checkbox-field">
-            <Checkbox v-model="formData.featured" inputId="featured" :binary="true" />
-            <label for="featured">Show in evidenza (Featured)</label>
+        <div class="detail-section">
+          <h3>Broadcast Information</h3>
+          <div class="detail-row">
+            <span class="detail-label">Frequency:</span>
+            <span class="detail-value">{{ selectedShow.frequency || 'Not specified' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Duration:</span>
+            <span class="detail-value">{{ selectedShow.duration || 'Not specified' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Broadcast Day:</span>
+            <span class="detail-value">{{ selectedShow.broadcastDay || 'Not specified' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Broadcast Time:</span>
+            <span class="detail-value">{{ selectedShow.broadcastTime || 'Not specified' }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Status</h3>
+          <div class="detail-row">
+            <span class="detail-label">Request Status:</span>
+            <Tag
+              :value="getRequestStatusLabel(selectedShow.requestStatus)"
+              :severity="getRequestStatusSeverity(selectedShow.requestStatus)"
+            />
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Show Status:</span>
+            <Tag
+              :value="getStatusLabel(selectedShow.status)"
+              :severity="getStatusSeverity(selectedShow.status)"
+            />
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Featured:</span>
+            <i
+              :class="selectedShow.featured ? 'pi pi-star-fill' : 'pi pi-star'"
+              :style="{ color: selectedShow.featured ? '#f59e0b' : '#cbd5e1' }"
+            ></i>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Social Media</h3>
+          <div class="detail-row" v-if="selectedShow.socialMedia?.facebook">
+            <span class="detail-label">Facebook:</span>
+            <a :href="selectedShow.socialMedia.facebook" target="_blank" class="detail-link">
+              {{ selectedShow.socialMedia.facebook }}
+            </a>
+          </div>
+          <div class="detail-row" v-if="selectedShow.socialMedia?.instagram">
+            <span class="detail-label">Instagram:</span>
+            <a :href="selectedShow.socialMedia.instagram" target="_blank" class="detail-link">
+              {{ selectedShow.socialMedia.instagram }}
+            </a>
+          </div>
+          <div class="detail-row" v-if="selectedShow.socialMedia?.twitter">
+            <span class="detail-label">Twitter:</span>
+            <a :href="selectedShow.socialMedia.twitter" target="_blank" class="detail-link">
+              {{ selectedShow.socialMedia.twitter }}
+            </a>
+          </div>
+          <div class="detail-row" v-if="selectedShow.socialMedia?.website">
+            <span class="detail-label">Website:</span>
+            <a :href="selectedShow.socialMedia.website" target="_blank" class="detail-link">
+              {{ selectedShow.socialMedia.website }}
+            </a>
+          </div>
+          <div v-if="!hasAnySocialMedia" class="detail-row">
+            <span class="detail-value">No social media links</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Audio</h3>
+          <div class="detail-row">
+            <span class="detail-label">Audio Status:</span>
+            <Tag
+              v-if="selectedShow.audio?.filename"
+              value="Audio Available"
+              severity="success"
+              icon="pi pi-volume-up"
+            />
+            <Tag
+              v-else
+              value="No Audio"
+              severity="secondary"
+              icon="pi pi-volume-off"
+            />
+          </div>
+          <div v-if="selectedShow.audio?.filename" class="detail-row">
+            <span class="detail-label">Filename:</span>
+            <span class="detail-value">{{ selectedShow.audio.originalName || selectedShow.audio.filename }}</span>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h3>Metadata</h3>
+          <div class="detail-row">
+            <span class="detail-label">Created:</span>
+            <span class="detail-value">{{ formatDate(selectedShow.createdAt) }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Last Updated:</span>
+            <span class="detail-value">{{ formatDate(selectedShow.updatedAt) }}</span>
           </div>
         </div>
       </div>
-
-      <template #footer>
-        <Button label="Cancel" @click="dialogVisible = false" text />
-        <Button
-          :label="editingShow ? 'Aggiorna' : 'Crea'"
-          @click="saveShow"
-          :loading="showsStore.loading"
-        />
-      </template>
     </Dialog>
 
-    <Toast />
-    <ConfirmDialog />
+    <!-- Delete Confirmation Dialog -->
+    <ConfirmDialog></ConfirmDialog>
   </DashboardLayout>
 </template>
 
@@ -568,96 +874,40 @@
 import { ref, computed, onMounted } from 'vue'
 import { useShowsStore } from '@/stores/shows'
 import { useAuthStore } from '@/stores/auth'
-import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
-import api from '@/api/axios'
-import ImageUpload from '@/components/ImageUpload.vue'
+import { useConfirm } from 'primevue/useconfirm'
 import DashboardLayout from '@/components/DashboardLayout.vue'
+import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const showsStore = useShowsStore()
 const authStore = useAuthStore()
-const confirm = useConfirm()
 const toast = useToast()
+const confirm = useConfirm()
 
-// Check if user is artist
-const isArtist = computed(() => authStore.user?.role === 'artist')
+// Artists state (gestito localmente invece che con store)
+const artists = ref([])
+const artistsLoading = ref(false)
 
-const dialogVisible = ref(false)
-const editingShow = ref(null)
+// Computed
+const isArtist = computed(() => {
+  const role = authStore.user?.role
+  console.log('Current user role:', role) // Debug log
+  return role === 'artist'
+})
+
+const isAdmin = computed(() => {
+  const role = authStore.user?.role
+  return role === 'admin' || role === 'superadmin'
+})
+
+// Current filter
 const currentFilter = ref('all')
-const genresInput = ref('')
-const tagsInput = ref('')
 
-// Audio Dialog State
-const audioDialogVisible = ref(false)
-const selectedShowForAudio = ref(null)
-const selectedAudioFile = ref(null)
-const audioUploading = ref(false)
-const uploadProgress = ref(0)
-const isPlaying = ref(false)
-const audioPlayerRef = ref(null)
-const audioFileInput = ref(null)
-
-// Computed per verificare se l'utente può gestire l'audio dello show selezionato
-const canManageAudio = computed(() => {
-  if (!selectedShowForAudio.value) return false
-
-  // Admin può sempre gestire
-  if (!isArtist.value) return true
-
-  // Artista può gestire solo se lo show è approvato
-  return selectedShowForAudio.value.requestStatus === 'approved'
-})
-
-const formData = ref({
-  title: '',
-  description: '',
-  artist: {
-    name: '',
-    bio: '',
-    email: '',
-    photo: '',
-    socialLinks: {}
-  },
-  image: { url: '', alt: '' },
-  genres: [],
-  tags: [],
-  requestStatus: 'pending',
-  status: 'active',
-  featured: false
-})
-
-const requestStatusOptions = [
-  { label: 'Pending', value: 'pending' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Rejected', value: 'rejected' }
-]
-
-const statusOptions = [
-  { label: 'Active', value: 'active' },
-  { label: 'Inactive', value: 'inactive' }
-]
-
-const filteredShows = computed(() => {
-  const shows = showsStore.shows
-  if (currentFilter.value === 'all') return shows
-  if (currentFilter.value === 'pending') {
-    return shows.filter(s => s.requestStatus === 'pending')
-  }
-  if (currentFilter.value === 'rejected') {
-    return shows.filter(s => s.requestStatus === 'rejected')
-  }
-  return shows.filter(s => s.status === currentFilter.value)
-})
-
+// Filter counts
 const pendingRequestsCount = computed(() =>
   showsStore.shows.filter(s => s.requestStatus === 'pending').length
-)
-
-const rejectedRequestsCount = computed(() =>
-  showsStore.shows.filter(s => s.requestStatus === 'rejected').length
 )
 
 const activeShowsCount = computed(() =>
@@ -668,431 +918,512 @@ const inactiveShowsCount = computed(() =>
   showsStore.shows.filter(s => s.status === 'inactive').length
 )
 
-const getFilterLabel = () => {
-  const labels = {
-    all: 'trovati',
-    pending: 'in attesa',
-    active: 'attivi',
-    inactive: 'inattivi',
-    rejected: 'rifiutati'
+const rejectedRequestsCount = computed(() =>
+  showsStore.shows.filter(s => s.requestStatus === 'rejected').length
+)
+
+// Filtered shows
+const filteredShows = computed(() => {
+  switch (currentFilter.value) {
+    case 'pending':
+      return showsStore.shows.filter(s => s.requestStatus === 'pending')
+    case 'active':
+      return showsStore.shows.filter(s => s.status === 'active')
+    case 'inactive':
+      return showsStore.shows.filter(s => s.status === 'inactive')
+    case 'rejected':
+      return showsStore.shows.filter(s => s.requestStatus === 'rejected')
+    default:
+      return showsStore.shows
   }
-  return labels[currentFilter.value] || ''
+})
+
+// Edit Dialog
+const editDialogVisible = ref(false)
+const editMode = ref(false)
+const editingShowId = ref(null)
+const formSubmitting = ref(false)
+const formErrors = ref({})
+
+// Form data
+const showForm = ref({
+  title: '',
+  description: '',
+  artistId: '',
+  artistName: '',
+  genres: [],
+  frequency: '',
+  duration: '',
+  broadcastDay: '',
+  broadcastTime: '',
+  status: 'active',
+  requestStatus: 'approved',
+  featured: false,
+  socialMedia: {
+    facebook: '',
+    instagram: '',
+    twitter: '',
+    website: ''
+  }
+})
+
+// Form options
+const availableGenres = [
+  'Rock', 'Pop', 'Jazz', 'Classical', 'Electronic',
+  'Hip Hop', 'R&B', 'Country', 'Blues', 'Reggae',
+  'Metal', 'Punk', 'Soul', 'Funk', 'Disco',
+  'House', 'Techno', 'Trance', 'Indie', 'Alternative'
+]
+
+const daysOfWeek = [
+  'Monday', 'Tuesday', 'Wednesday', 'Thursday',
+  'Friday', 'Saturday', 'Sunday'
+]
+
+const statusOptions = [
+  { label: 'Active', value: 'active' },
+  { label: 'Inactive', value: 'inactive' }
+]
+
+const requestStatusOptions = [
+  { label: 'Pending', value: 'pending' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Rejected', value: 'rejected' }
+]
+
+// View Dialog
+const viewDialogVisible = ref(false)
+const selectedShow = ref(null)
+
+// Audio Dialog
+const audioDialogVisible = ref(false)
+const selectedShowForAudio = ref(null)
+const audioFileInputRef = ref(null)
+const selectedAudioFile = ref(null)
+const audioUploading = ref(false)
+const uploadProgress = ref(0)
+const audioPlayerRef = ref(null)
+const isPlaying = ref(false)
+
+// Computed for audio management permissions
+const canManageAudio = computed(() => {
+  if (!selectedShowForAudio.value) return false
+
+  // Admin can always manage
+  if (!isArtist.value) return true
+
+  // Artist can only manage if show is approved
+  return selectedShowForAudio.value.requestStatus === 'approved'
+})
+
+// Helper computed for view dialog
+const hasAnySocialMedia = computed(() => {
+  if (!selectedShow.value?.socialMedia) return false
+  const sm = selectedShow.value.socialMedia
+  return sm.facebook || sm.instagram || sm.twitter || sm.website
+})
+
+// Helper functions
+const getFilterLabel = () => {
+  switch (currentFilter.value) {
+    case 'pending': return 'with pending status'
+    case 'active': return 'that are active'
+    case 'inactive': return 'that are inactive'
+    case 'rejected': return 'that are rejected'
+    default: return ''
+  }
 }
 
 const getRequestStatusLabel = (status) => {
-  const map = {
-    pending: 'PENDING',
-    approved: 'APPROVED',
-    rejected: 'REJECTED'
+  const labels = {
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected'
   }
-  return map[status] || status?.toUpperCase()
+  return labels[status] || status
 }
 
 const getRequestStatusSeverity = (status) => {
-  const map = {
+  const severities = {
     pending: 'warning',
     approved: 'success',
     rejected: 'danger'
   }
-  return map[status] || 'info'
+  return severities[status] || 'info'
 }
 
 const getStatusLabel = (status) => {
-  return status?.toUpperCase() || '-'
+  const labels = {
+    active: 'Active',
+    inactive: 'Inactive'
+  }
+  return labels[status] || status
 }
 
 const getStatusSeverity = (status) => {
-  const map = {
+  const severities = {
     active: 'success',
-    inactive: 'secondary'
+    inactive: 'info'
   }
-  return map[status] || 'info'
+  return severities[status] || 'info'
 }
 
-// ==================== AUDIO MANAGEMENT FUNCTIONS ====================
-
-const openAudioDialog = (show) => {
-  selectedShowForAudio.value = show
-  selectedAudioFile.value = null
-  isPlaying.value = false
-  audioDialogVisible.value = true
+const getArtistName = (artistId) => {
+  const artist = artists.value.find(a => a._id === artistId)
+  return artist?.name || 'Unknown'
 }
 
-const getAudioUrl = (id) => {
-  const ep = episodes.value.find(e => e._id === id) || previewEpisode.value
-
-  // Se c'è URL B2/Cloudinary, usalo direttamente
-  if (ep?.audioFile?.url) {
-    return ep.audioFile.url
+// Fetch artists
+const fetchArtists = async () => {
+  artistsLoading.value = true
+  try {
+    const token = localStorage.getItem('token')
+    const response = await axios.get(`${API_URL}/api/artists`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    artists.value = response.data
+  } catch (error) {
+    console.error('Error fetching artists:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load artists',
+      life: 3000
+    })
+  } finally {
+    artistsLoading.value = false
   }
+}
 
-  // Fallback per vecchi file locali (retrocompatibilità)
-  if (ep?.audioFile?.storedFilename) {
-    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace('/api', '')
-    return `${base}/uploads/episodes/${ep.audioFile.storedFilename}`
-  }
-
-  return null
+const formatDate = (date) => {
+  if (!date) return 'N/A'
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const formatDuration = (seconds) => {
-  if (!seconds) return '0:00'
-  const mins = Math.floor(seconds / 60)
+  if (!seconds) return 'Unknown'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
   const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`
+  }
+  return `${minutes}m ${secs}s`
 }
 
 const formatFileSize = (bytes) => {
-  if (!bytes) return '0 B'
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
-const playAudio = () => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.play()
-    isPlaying.value = true
+// Reset form
+const resetForm = () => {
+  showForm.value = {
+    title: '',
+    description: '',
+    artistId: '',
+    artistName: '',
+    genres: [],
+    frequency: '',
+    duration: '',
+    broadcastDay: '',
+    broadcastTime: '',
+    status: 'active',
+    requestStatus: 'approved',
+    featured: false,
+    socialMedia: {
+      facebook: '',
+      instagram: '',
+      twitter: '',
+      website: ''
+    }
   }
+  formErrors.value = {}
 }
 
-const pauseAudio = () => {
-  if (audioPlayerRef.value) {
-    audioPlayerRef.value.pause()
-    isPlaying.value = false
+// Validate form
+const validateForm = () => {
+  const errors = {}
+
+  if (!showForm.value.title?.trim()) {
+    errors.title = 'Title is required'
   }
-}
 
-const handleAudioError = () => {
-  toast.add({
-    severity: 'error',
-    summary: 'Error',
-    detail: 'Unable to load audio file',
-    life: 3000
-  })
-}
-
-const downloadAudio = () => {
-  if (!selectedShowForAudio.value?.audio?.url) return
-
-  const url = getAudioUrl(selectedShowForAudio.value)
-  const filename = selectedShowForAudio.value.audio.originalName ||
-    selectedShowForAudio.value.audio.filename ||
-    'audio.mp3'
-
-  // Crea un link temporaneo per il download
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.target = '_blank'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-
-  toast.add({
-    severity: 'info',
-    summary: 'Download',
-    detail: 'Download started',
-    life: 2000
-  })
-}
-
-const triggerFileInput = () => {
-  if (audioFileInput.value) {
-    audioFileInput.value.click()
+  if (!showForm.value.description?.trim()) {
+    errors.description = 'Description is required'
   }
+
+  // artistId è richiesto solo per admin in creazione
+  if (isAdmin.value && !editMode.value && !showForm.value.artistId) {
+    errors.artistId = 'Artist is required'
+  }
+
+  if (!showForm.value.genres || showForm.value.genres.length === 0) {
+    errors.genres = 'At least one genre is required'
+  }
+
+  // Status validation solo per admin
+  if (isAdmin.value) {
+    if (!showForm.value.status) {
+      errors.status = 'Status is required'
+    }
+
+    if (!showForm.value.requestStatus) {
+      errors.requestStatus = 'Request status is required'
+    }
+  }
+
+  formErrors.value = errors
+  return Object.keys(errors).length === 0
 }
 
-const onAudioFileChange = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    // Validazione base lato client
-    if (!file.type.includes('audio/mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
+// Open edit dialog (create mode)
+const openDialog = () => {
+  resetForm()
+  editMode.value = false
+  editingShowId.value = null
+  editDialogVisible.value = true
+}
+
+// Open edit dialog (edit mode)
+const openEditDialog = (show) => {
+  // Controllo permessi: artisti possono editare solo i propri show
+  if (isArtist.value) {
+    const currentUserId = authStore.user?._id || authStore.user?.id
+
+    // Lo show non ha artistId, ma ha createdBy che contiene l'ID dell'utente che l'ha creato
+    let showArtistId = null
+
+    if (show.createdBy) {
+      if (typeof show.createdBy === 'object') {
+        showArtistId = show.createdBy._id || show.createdBy.id
+      } else {
+        showArtistId = show.createdBy
+      }
+    }
+
+    console.log('=== Edit Permission Check ===')
+    console.log('Current User ID:', currentUserId)
+    console.log('Show Artist ID (from createdBy):', showArtistId)
+    console.log('============================')
+
+    if (!showArtistId) {
       toast.add({
         severity: 'error',
-        summary: 'Invalid format',
-        detail: 'Select an MP3 file',
+        summary: 'Error',
+        detail: 'Cannot determine show creator. Please contact admin.',
         life: 3000
       })
       return
     }
-    selectedAudioFile.value = file
+
+    if (currentUserId !== showArtistId) {
+      toast.add({
+        severity: 'error',
+        summary: 'Permission Denied',
+        detail: 'You can only edit your own shows',
+        life: 3000
+      })
+      return
+    }
+  }
+
+  resetForm()
+  editMode.value = true
+  editingShowId.value = show._id
+
+  // Populate form with show data
+  // Per artistId, usiamo createdBy visto che non c'è un campo artistId nello show
+  let artistId = ''
+  if (show.createdBy) {
+    if (typeof show.createdBy === 'object') {
+      artistId = show.createdBy._id || show.createdBy.id || ''
+    } else {
+      artistId = show.createdBy
+    }
+  }
+
+  showForm.value = {
+    title: show.title || '',
+    description: show.description || '',
+    artistId: artistId,
+    artistName: show.artist?.name || show.createdBy?.name || '',
+    genres: show.genres || [],
+    frequency: show.schedule?.frequency || show.frequency || '',
+    duration: show.duration || '',
+    broadcastDay: show.schedule?.dayOfWeek || show.broadcastDay || '',
+    broadcastTime: show.schedule?.timeSlot || show.broadcastTime || '',
+    status: show.status || 'active',
+    requestStatus: show.requestStatus || 'approved',
+    featured: show.featured || false,
+    socialMedia: {
+      facebook: show.socialMedia?.facebook || '',
+      instagram: show.socialMedia?.instagram || '',
+      twitter: show.socialMedia?.twitter || '',
+      website: show.socialMedia?.website || ''
+    }
+  }
+
+  editDialogVisible.value = true
+}
+
+// Close edit dialog
+const closeEditDialog = () => {
+  if (!formSubmitting.value) {
+    editDialogVisible.value = false
+    resetForm()
   }
 }
 
-const clearSelectedFile = () => {
-  selectedAudioFile.value = null
-  if (audioFileInput.value) {
-    audioFileInput.value.value = ''
-  }
-}
-
-const uploadAudio = async () => {
-  if (!selectedAudioFile.value || !selectedShowForAudio.value) return
-
-  audioUploading.value = true
-  uploadProgress.value = 0
-
-  const formData = new FormData()
-  formData.append('audio', selectedAudioFile.value)
-
-  try {
-    const response = await api.post(
-      `${API_URL}/shows/${selectedShowForAudio.value._id}/audio`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress: (progressEvent) => {
-          uploadProgress.value = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          )
-        }
-      }
-    )
-
-    // Update show with new audio data
-    selectedShowForAudio.value.audio = response.data.audio
-
-    toast.add({
-      severity: 'success',
-      summary: 'Audio uploaded',
-      detail: 'Audio file uploaded successfully',
-      life: 3000
-    })
-
-    // Refresh shows list
-    await showsStore.fetchShows()
-
-    // Reset
-    selectedAudioFile.value = null
-
-  } catch (error) {
-    console.error('Audio upload error:', error)
+// Handle form submit
+const handleSubmit = async () => {
+  if (!validateForm()) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.error || 'Errore nel caricamento dell\'audio',
-      life: 4000
-    })
-  } finally {
-    audioUploading.value = false
-    uploadProgress.value = 0
-  }
-}
-
-const confirmDeleteAudio = () => {
-  confirm.require({
-    message: 'Are you sure you want to delete this audio file?',
-    header: 'Confirm Deletion',
-    icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Yes, delete',
-    rejectLabel: 'Cancel',
-    acceptClass: 'p-button-danger',
-    accept: () => deleteAudio()
-  })
-}
-
-const deleteAudio = async () => {
-  if (!selectedShowForAudio.value) return
-
-  try {
-    await api.delete(`${API_URL}/shows/${selectedShowForAudio.value._id}/audio`)
-
-    // Reset audio data
-    selectedShowForAudio.value.audio = {
-      filename: null,
-      originalName: null,
-      url: null,
-      duration: null,
-      bitrate: null,
-      uploadedAt: null
-    }
-
-    toast.add({
-      severity: 'success',
-      summary: 'Audio deleted',
-      detail: 'Audio file deleted successfully',
-      life: 3000
-    })
-
-    // Refresh shows list
-    await showsStore.fetchShows()
-
-  } catch (error) {
-    console.error('Audio deletion error:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.response?.data?.error || 'Errore nell\'eliminazione dell\'audio',
-      life: 3000
-    })
-  }
-}
-
-// ==================== SHOW MANAGEMENT FUNCTIONS ====================
-
-const openDialog = (show = null) => {
-  editingShow.value = show
-  if (show) {
-    formData.value = {
-      title: show.title || '',
-      description: show.description || '',
-      artist: {
-        name: show.artist?.name || '',
-        bio: show.artist?.bio || '',
-        email: show.artist?.email || '',
-        photo: show.artist?.photo || '',
-        socialLinks: show.artist?.socialLinks || {}
-      },
-      image: {
-        url: show.image?.url || '',
-        alt: show.image?.alt || ''
-      },
-      genres: show.genres || [],
-      tags: show.tags || [],
-      requestStatus: show.requestStatus || 'pending',
-      status: show.status || 'active',
-      featured: show.featured || false
-    }
-    genresInput.value = show.genres?.join(', ') || ''
-    tagsInput.value = show.tags?.join(', ') || ''
-  } else {
-    formData.value = {
-      title: '',
-      description: '',
-      artist: {
-        name: '',
-        bio: '',
-        email: '',
-        photo: '',
-        socialLinks: {}
-      },
-      image: { url: '', alt: '' },
-      genres: [],
-      tags: [],
-      requestStatus: 'pending',
-      status: 'active',
-      featured: false
-    }
-    genresInput.value = ''
-    tagsInput.value = ''
-  }
-  dialogVisible.value = true
-}
-
-const saveShow = async () => {
-  if (!formData.value.title || !formData.value.description || !formData.value.artist.name) {
-    toast.add({
-      severity: 'warn',
-      summary: 'Warning',
-      detail: 'Fill in required fields (title, description, artist)',
+      summary: 'Validation Error',
+      detail: 'Please fix the errors in the form',
       life: 3000
     })
     return
   }
 
-  const showData = {
-    title: formData.value.title,
-    description: formData.value.description,
-    artist: {
-      name: formData.value.artist.name,
-      bio: formData.value.artist.bio || '',
-      email: formData.value.artist.email || '',
-      photo: formData.value.artist.photo || '',
-      socialLinks: formData.value.artist.socialLinks || {}
-    },
-    image: {
-      url: formData.value.image.url || '',
-      alt: formData.value.image.alt || ''
-    },
-    genres: genresInput.value.split(',').map(g => g.trim()).filter(g => g),
-    tags: tagsInput.value ? tagsInput.value.split(',').map(t => t.trim()).filter(t => t) : [],
-    requestStatus: formData.value.requestStatus,
-    status: formData.value.status,
-    featured: formData.value.featured
-  }
+  formSubmitting.value = true
 
   try {
-    if (editingShow.value) {
-      await showsStore.updateShow(editingShow.value._id, showData)
+    // Prepara i dati da inviare
+    let dataToSubmit = { ...showForm.value }
+
+    // Se l'utente è un artista, rimuovi i campi che non può modificare
+    if (isArtist.value && editMode.value) {
+      // Gli artisti non possono modificare status, requestStatus e featured
+      delete dataToSubmit.status
+      delete dataToSubmit.requestStatus
+      delete dataToSubmit.featured
+    }
+
+    if (editMode.value) {
+      // Update existing show
+      await showsStore.updateShow(editingShowId.value, dataToSubmit)
       toast.add({
         severity: 'success',
-        summary: 'Show updated',
-        detail: 'Changes saved successfully',
+        summary: 'Success',
+        detail: 'Show updated successfully',
         life: 3000
       })
     } else {
-      await showsStore.createShow(showData)
+      // Create new show (solo admin)
+      if (isArtist.value) {
+        toast.add({
+          severity: 'error',
+          summary: 'Permission Denied',
+          detail: 'Artists cannot create new shows',
+          life: 3000
+        })
+        formSubmitting.value = false
+        return
+      }
+
+      await showsStore.createShow(dataToSubmit)
       toast.add({
         severity: 'success',
-        summary: 'Show created',
-        detail: 'New show created successfully',
+        summary: 'Success',
+        detail: 'Show created successfully',
         life: 3000
       })
     }
 
-    dialogVisible.value = false
+    closeEditDialog()
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: showsStore.error || 'Error saving data',
+      detail: error.message || `Failed to ${editMode.value ? 'update' : 'create'} show`,
+      life: 3000
+    })
+  } finally {
+    formSubmitting.value = false
+  }
+}
+
+// View show details
+const viewShow = (show) => {
+  selectedShow.value = show
+  viewDialogVisible.value = true
+}
+
+// Approve request
+const approveRequest = async (show) => {
+  try {
+    await showsStore.approveShow(show._id)
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Show request approved',
+      life: 3000
+    })
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to approve show request',
       life: 3000
     })
   }
 }
 
-const viewShow = (show) => {
-  const details = `
-Dettagli Show:
-
-Title: ${show.title}
-Artista: ${show.artist?.name || '-'}
-Email: ${show.artist?.email || '-'}
-Status: ${show.status}
-Request Status: ${show.requestStatus}
-Featured: ${show.featured ? 'Sì' : 'No'}
-Generi: ${show.genres?.join(', ') || '-'}
-Audio: ${show.audio?.filename ? 'Sì (' + formatDuration(show.audio.duration) + ')' : 'No'}
-
-Descrizione:
-${show.description || '-'}
-
-${show.adminNotes ? `Note Admin:\n${show.adminNotes}` : ''}
-  `.trim()
-
-  alert(details)
+// Reject request
+const rejectRequest = async (show) => {
+  try {
+    await showsStore.rejectShow(show._id)
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Show request rejected',
+      life: 3000
+    })
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to reject show request',
+      life: 3000
+    })
+  }
 }
 
-const approveRequest = async (show) => {
+// Confirm delete
+const confirmDelete = (show) => {
   confirm.require({
-    message: `Do you want to approve the show "${show.title}" by ${show.artist.name}?`,
-    header: 'Approva Richiesta',
-    icon: 'pi pi-check-circle',
-    acceptLabel: 'Yes, approve',
-    rejectLabel: 'Cancel',
-    acceptClass: 'p-button-success',
+    message: `Are you sure you want to delete "${show.title}"? This action cannot be undone.`,
+    header: 'Delete Confirmation',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
     accept: async () => {
       try {
-        await api.put(`${API_URL}/shows/admin/${show._id}/approve`, {
-          adminNotes: 'Show approvato! Benvenuto su BUG Radio 🎵'
-        })
-
+        await showsStore.deleteShow(show._id)
         toast.add({
           severity: 'success',
-          summary: 'Show Approved!',
-          detail: `"${show.title}" has been approved and activated`,
-          life: 4000
+          summary: 'Success',
+          detail: 'Show deleted successfully',
+          life: 3000
         })
-
-        await showsStore.fetchShows()
       } catch (error) {
         toast.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Error approving show',
+          detail: 'Failed to delete show',
           life: 3000
         })
       }
@@ -1100,73 +1431,168 @@ const approveRequest = async (show) => {
   })
 }
 
-const rejectRequest = async (show) => {
-  const rejectReason = prompt(`Reason for rejecting "${show.title}":`, 'The content is not suitable for our programming.')
+// Audio Dialog functions
+const openAudioDialog = (show) => {
+  selectedShowForAudio.value = show
+  selectedAudioFile.value = null
+  audioUploading.value = false
+  uploadProgress.value = 0
+  isPlaying.value = false
+  audioDialogVisible.value = true
+}
 
-  if (!rejectReason) return
+const triggerAudioFileInput = () => {
+  audioFileInputRef.value?.click()
+}
 
-  try {
-    await api.put(`${API_URL}/shows/admin/${show._id}/reject`, {
-      adminNotes: rejectReason
-    })
+const handleAudioFileSelect = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    // Validate file type
+    if (!file.type.startsWith('audio/')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Invalid File',
+        detail: 'Please select an audio file',
+        life: 3000
+      })
+      return
+    }
 
-    toast.add({
-      severity: 'info',
-      summary: 'Show Rejected',
-      detail: `"${show.title}" has been rejected`,
-      life: 3000
-    })
+    // Validate file size (200MB)
+    if (file.size > 200 * 1024 * 1024) {
+      toast.add({
+        severity: 'error',
+        summary: 'File Too Large',
+        detail: 'Maximum file size is 200MB',
+        life: 3000
+      })
+      return
+    }
 
-    await showsStore.fetchShows()
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Error rejecting show',
-      life: 3000
-    })
+    selectedAudioFile.value = file
   }
 }
 
-const confirmDelete = (show) => {
-  confirm.require({
-    message: `Are you sure you want to delete "${show.title}"?`,
-    header: 'Confirm Deletion',
-    icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Yes, delete',
-    rejectLabel: 'Cancel',
-    acceptClass: 'p-button-danger',
-    accept: () => deleteShow(show)
+const handleAudioUpload = async () => {
+  if (!selectedAudioFile.value || !selectedShowForAudio.value) return
+
+  audioUploading.value = true
+  uploadProgress.value = 0
+
+  try {
+    const formData = new FormData()
+    formData.append('audio', selectedAudioFile.value)
+
+    await showsStore.uploadShowAudio(selectedShowForAudio.value._id, formData, (progress) => {
+      uploadProgress.value = progress
+    })
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'Audio uploaded successfully',
+      life: 3000
+    })
+
+    // Reset file input
+    selectedAudioFile.value = null
+    if (audioFileInputRef.value) {
+      audioFileInputRef.value.value = ''
+    }
+
+    // Refresh show data
+    selectedShowForAudio.value = showsStore.shows.find(s => s._id === selectedShowForAudio.value._id)
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Upload Error',
+      detail: error.message || 'Failed to upload audio',
+      life: 3000
+    })
+  } finally {
+    audioUploading.value = false
+    uploadProgress.value = 0
+  }
+}
+
+const getAudioUrl = (show) => {
+  if (!show?.audio?.filename) return ''
+  return `${import.meta.env.VITE_API_URL}/uploads/audio/${show.audio.filename}`
+}
+
+const playAudio = () => {
+  audioPlayerRef.value?.play()
+}
+
+const pauseAudio = () => {
+  audioPlayerRef.value?.pause()
+}
+
+const downloadAudio = () => {
+  if (!selectedShowForAudio.value?.audio?.filename) return
+
+  const url = getAudioUrl(selectedShowForAudio.value)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = selectedShowForAudio.value.audio.originalName || selectedShowForAudio.value.audio.filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+const handleAudioError = (event) => {
+  console.error('Audio playback error:', event)
+  toast.add({
+    severity: 'error',
+    summary: 'Playback Error',
+    detail: 'Failed to load audio file',
+    life: 3000
   })
 }
 
-const deleteShow = async (show) => {
-  try {
-    await showsStore.deleteShow(show._id)
-    toast.add({
-      severity: 'success',
-      summary: 'Show deleted',
-      detail: 'Show deleted successfully',
-      life: 3000
-    })
-  } catch (error) {
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Error deleting show',
-      life: 3000
-    })
-  }
+const confirmDeleteAudio = () => {
+  confirm.require({
+    message: 'Are you sure you want to delete this audio file? This action cannot be undone.',
+    header: 'Delete Audio Confirmation',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        await showsStore.deleteShowAudio(selectedShowForAudio.value._id)
+        toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Audio deleted successfully',
+          life: 3000
+        })
+
+        // Refresh show data
+        selectedShowForAudio.value = showsStore.shows.find(s => s._id === selectedShowForAudio.value._id)
+      } catch (error) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete audio',
+          life: 3000
+        })
+      }
+    }
+  })
 }
 
+// Lifecycle
 onMounted(async () => {
   try {
-    await showsStore.fetchShows()
+    await Promise.all([
+      showsStore.fetchShows(),
+      fetchArtists()
+    ])
   } catch (error) {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Error loading shows',
+      detail: 'Error loading data',
       life: 3000
     })
   }
@@ -1449,6 +1875,10 @@ onMounted(async () => {
   margin-bottom: 1.5rem;
 }
 
+.form-field:last-child {
+  margin-bottom: 0;
+}
+
 .form-field label {
   display: block;
   margin-bottom: 0.5rem;
@@ -1461,6 +1891,10 @@ onMounted(async () => {
   margin-top: 0.4rem;
   color: #6b7280;
   font-size: 0.85rem;
+}
+
+.form-field small.p-error {
+  color: #ef4444;
 }
 
 .form-row {
@@ -1476,7 +1910,70 @@ onMounted(async () => {
   padding: 0.75rem 0;
 }
 
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
 .w-full {
   width: 100%;
+}
+
+/* View Dialog Styles */
+.view-dialog-content {
+  padding: 0.5rem 0;
+}
+
+.detail-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.detail-section h3 {
+  margin: 0 0 1rem;
+  color: #1f2937;
+  font-size: 1.125rem;
+}
+
+.detail-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 140px;
+}
+
+.detail-value {
+  color: #1f2937;
+  flex: 1;
+}
+
+.detail-link {
+  color: #3b82f6;
+  text-decoration: none;
+  flex: 1;
+}
+
+.detail-link:hover {
+  text-decoration: underline;
 }
 </style>

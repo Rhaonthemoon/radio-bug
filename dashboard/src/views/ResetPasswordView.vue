@@ -26,7 +26,7 @@
             <h3>Invalid or Expired Token</h3>
             <p>This password reset link is invalid or has expired.</p>
             <p style="margin-top: 20px;">Password reset links expire after 1 hour.</p>
-            
+
             <Button
                 label="Request New Link"
                 icon="pi pi-refresh"
@@ -168,7 +168,7 @@ const handleResetPassword = async () => {
 
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-    const response = await fetch(`${apiUrl}/api/auth/reset-password`, {
+    const response = await fetch(`${apiUrl}/auth/reset-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
