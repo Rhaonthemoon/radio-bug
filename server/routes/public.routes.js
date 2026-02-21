@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Episode = require('../models/Episode');
 const Show = require('../models/Shows');
+const Post = require('../models/Post');
 
 // Middleware per passare il path corrente
 router.use((req, res, next) => {
@@ -115,12 +116,20 @@ router.get('/shows', async (req, res) => {
 });
 router.get('/about', async (req, res) => {
     try {
+        const eventPosts = await Post.find({
+            status: 'published',
+            category: 'event'
+        })
+            .sort({ publishedAt: -1 })
+            .limit(4)
+            .select('title slug image');
 
         res.render('about', {
-            title: 'Shows - BUG Radio'
+            title: 'About - BUG Radio',
+            eventPosts
         });
     } catch (err) {
-        console.error('Shows error:', err);
+        console.error('About error:', err);
         res.status(500).send('Errore server');
     }
 });

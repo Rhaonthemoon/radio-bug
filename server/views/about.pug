@@ -9,14 +9,11 @@ block content
 
                 //- Events grid
                 .events-grid
-                    .event-card
-                        img(src="/assets/events/2025.jpg" alt="2025")
-                    .event-card
-                        img(src="/assets/events/event-2.jpg" alt="Event")
-                    .event-card
-                        img(src="/assets/events/event-3.jpg" alt="Event")
-                    .event-card
-                        img(src="/assets/events/event-4.jpg" alt="Event")
+                    each post in eventPosts
+                        a.event-card(href=`/events/${post.slug}`)
+                            img(src=post.image.url alt=post.title)
+                    if eventPosts.length === 0
+                        p.no-events No events available
 
                 a.events-btn(href="/events")
                     span GUARDA TUTTI
