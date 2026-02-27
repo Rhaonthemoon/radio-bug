@@ -1,88 +1,52 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 /**
- * Configurazione Email - SendGrid API vs IONOS SMTP
- * SendGrid API funziona su Render (non usa porte SMTP)
+ * Configurazione Email - Resend API
+ * Piano free: 3.000 email/mese
+ * Docs: https://resend.com/docs
+ *
+ * Variabili d'ambiente necessarie:
+ *   RESEND_API_KEY   → chiave API da resend.com/api-keys
+ *   EMAIL_FROM       → mittente verificato (es. "noreply@tuodominio.com")
+ *   FRONTEND_URL     → URL del frontend (es. "https://bug-radio.com")
+ *   ADMIN_EMAIL      → email admin per notifiche (opzionale)
  */
 
-// Determina quale servizio usare
-const useSendGrid = process.env.USE_SENDGRID === 'true' || process.env.SENDGRID_API_KEY;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-let transporter;
+// Helper interno per inviare email
+const sendEmail = async ({ to, subject, html, from }) => {
+    const sender = from || `"BUG Radio" <${process.env.EMAIL_FROM}>`;
 
-if (useSendGrid) {
-    // ===== SENDGRID API CONFIGURATION =====
-    console.log('📧 Using SendGrid API for emails');
-
-    // IMPORTANTE: Usa SendGrid API, non SMTP!
-    // Render blocca TUTTE le porte SMTP (incluso smtp.sendgrid.net)
-    const sgMail = require('@sendgrid/mail');
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-    // Crea transporter wrapper per compatibilità con nodemailer
-    transporter = {
-        sendMail: async (mailOptions) => {
-            const msg = {
-                to: mailOptions.to,
-                from: mailOptions.from,
-                subject: mailOptions.subject,
-                html: mailOptions.html
-            };
-
-            try {
-                const result = await sgMail.send(msg);
-                console.log('✅ Email inviata via SendGrid API');
-                return { messageId: result[0].headers['x-message-id'] };
-            } catch (error) {
-                console.error('❌ SendGrid API error:', error.response?.body || error.message);
-                throw error;
-            }
-        },
-        verify: (callback) => {
-            // SendGrid API non ha verify, simula success
-            console.log('✅ SendGrid API pronto');
-            if (callback) callback(null, true);
-        }
-    };
-
-} else {
-    // ===== IONOS SMTP CONFIGURATION (per sviluppo locale) =====
-    console.log('📧 Using IONOS SMTP for emails');
-
-    transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.ionos.it',
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_PORT === '465',
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASSWORD
-        },
-        tls: {
-            rejectUnauthorized: false
-        }
+    const { data, error } = await resend.emails.send({
+        from: sender,
+        to,
+        subject,
+        html,
     });
 
-    // Verifica connessione SMTP
-    transporter.verify(function(error, success) {
-        if (error) {
-            console.error('❌ Errore connessione SMTP:', error.message);
-        } else {
-            console.log('✅ Server SMTP pronto');
-        }
-    });
-}
+    if (error) {
+        console.error('❌ Resend error:', error);
+        throw new Error(error.message);
+    }
+
+    console.log('✅ Email inviata via Resend, id:', data.id);
+    return { messageId: data.id };
+};
+
+// ─── EMAIL FUNCTIONS ───────────────────────────────────────────────────────────
 
 /**
- * Invia email di verifica account
+ * Email di verifica account
  */
 const sendVerificationEmail = async (email, name, verificationToken) => {
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
 
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: 'Confirm Your Account - BUG Radio',
-        html: `
+    try {
+        const info = await sendEmail({
+            to: email,
+            subject: 'Confirm Your Account - BUG Radio',
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -116,12 +80,8 @@ const sendVerificationEmail = async (email, name, verificationToken) => {
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email verifica inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email verifica:', error);
@@ -130,14 +90,14 @@ const sendVerificationEmail = async (email, name, verificationToken) => {
 };
 
 /**
- * Invia email di benvenuto
+ * Email di benvenuto
  */
 const sendWelcomeEmail = async (email, name) => {
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: 'Welcome to BUG Radio! 🎉',
-        html: `
+    try {
+        const info = await sendEmail({
+            to: email,
+            subject: 'Welcome to BUG Radio! 🎉',
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -166,12 +126,8 @@ const sendWelcomeEmail = async (email, name) => {
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email benvenuto inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email benvenuto:', error);
@@ -180,17 +136,17 @@ const sendWelcomeEmail = async (email, name) => {
 };
 
 /**
- * Invia email di notifica approvazione show
+ * Email di notifica approvazione show
  */
 const sendShowApprovedEmail = async (email, artistName, showTitle, showSlug, adminNotes) => {
     const showUrl = `${process.env.FRONTEND_URL}/artist/my-episodes?show=${showSlug}`;
     const dashboardUrl = `${process.env.FRONTEND_URL}/artist/dashboard`;
 
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: `🎉 Your Show "${showTitle}" Has Been Approved!`,
-        html: `
+    try {
+        const info = await sendEmail({
+            to: email,
+            subject: `🎉 Your Show "${showTitle}" Has Been Approved!`,
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -201,41 +157,26 @@ const sendShowApprovedEmail = async (email, artistName, showTitle, showSlug, adm
           .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
           .show-badge { display: inline-block; padding: 8px 16px; background: #22c55e; color: white; border-radius: 20px; font-weight: bold; margin: 10px 0; }
           .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 10px 10px 0; font-weight: bold; }
-          .admin-notes { background: #fff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header"><h1>🎉 Show Approved!</h1></div>
           <div class="content">
-            <h2>Great news, ${artistName}!</h2>
-            <p>We're excited to inform you that your show has been approved!</p>
+            <h2>Hello ${artistName}!</h2>
+            <p>Great news! Your show has been approved:</p>
+            <div class="show-badge">📻 ${showTitle}</div>
+            ${adminNotes ? `<p><strong>Admin notes:</strong> ${adminNotes}</p>` : ''}
             <div style="text-align: center;">
-              <span class="show-badge">✓ APPROVED</span>
-            </div>
-            <h3 style="color: #667eea; margin-top: 20px;">📻 ${showTitle}</h3>
-            ${adminNotes ? `
-              <div class="admin-notes">
-                <strong>📝 Admin Notes:</strong>
-                <p style="margin: 10px 0 0;">${adminNotes}</p>
-              </div>
-            ` : ''}
-            <h3 style="margin-top: 30px;">What's Next?</h3>
-            <p>You can now start uploading episodes for your show!</p>
-            <div style="margin-top: 30px; text-align: center;">
-              <a href="${showUrl}" class="button">Upload Episodes</a>
-              <a href="${dashboardUrl}" class="button" style="background: #6b7280;">Dashboard</a>
+              <a href="${showUrl}" class="button">View My Show</a>
+              <a href="${dashboardUrl}" class="button" style="background: #22c55e;">Dashboard</a>
             </div>
           </div>
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email approvazione show inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email approvazione show:', error);
@@ -244,31 +185,31 @@ const sendShowApprovedEmail = async (email, artistName, showTitle, showSlug, adm
 };
 
 /**
- * Invia email di notifica rifiuto show
+ * Email di notifica rifiuto show
  */
 const sendShowRejectedEmail = async (email, artistName, showTitle, adminNotes) => {
     const dashboardUrl = `${process.env.FRONTEND_URL}/artist/dashboard`;
 
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: `Update on Your Show Request: "${showTitle}"`,
-        html: `
+    try {
+        const info = await sendEmail({
+            to: email,
+            subject: `Your Show "${showTitle}" - Update`,
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
           .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-          .admin-notes { background: #fff; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }
-          .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0 10px 0; font-weight: bold; }
+          .admin-notes { background: #fff; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
+          .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
         </style>
       </head>
       <body>
         <div class="container">
-          <div class="header"><h1>📋 Show Request Update</h1></div>
+          <div class="header"><h1>Show Update</h1></div>
           <div class="content">
             <h2>Hello ${artistName},</h2>
             <h3 style="color: #667eea; margin-top: 20px;">📻 ${showTitle}</h3>
@@ -284,12 +225,8 @@ const sendShowRejectedEmail = async (email, artistName, showTitle, adminNotes) =
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email rifiuto show inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email rifiuto show:', error);
@@ -298,16 +235,16 @@ const sendShowRejectedEmail = async (email, artistName, showTitle, adminNotes) =
 };
 
 /**
- * Invia email per reset password
+ * Email per reset password
  */
 const sendPasswordResetEmail = async (email, name, resetToken) => {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: 'Reset Your Password - BUG Radio',
-        html: `
+    try {
+        const info = await sendEmail({
+            to: email,
+            subject: 'Reset Your Password - BUG Radio',
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -337,12 +274,8 @@ const sendPasswordResetEmail = async (email, name, resetToken) => {
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email reset password inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email reset:', error);
@@ -351,14 +284,14 @@ const sendPasswordResetEmail = async (email, name, resetToken) => {
 };
 
 /**
- * Invia email di conferma cambio password
+ * Email di conferma cambio password
  */
 const sendPasswordChangedEmail = async (email, name) => {
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: email,
-        subject: 'Your Password Has Been Changed - BUG Radio',
-        html: `
+    try {
+        const info = await sendEmail({
+            to: email,
+            subject: 'Your Password Has Been Changed - BUG Radio',
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -384,12 +317,8 @@ const sendPasswordChangedEmail = async (email, name) => {
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email conferma cambio password inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email conferma:', error);
@@ -398,17 +327,17 @@ const sendPasswordChangedEmail = async (email, name) => {
 };
 
 /**
- * Invia email di notifica all'admin per nuova richiesta show
+ * Email di notifica all'admin per nuova richiesta show
  */
 const sendNewShowRequestEmail = async (artistName, artistEmail, showTitle, showDescription) => {
     const adminEmail = process.env.ADMIN_EMAIL || 'onair.onsite@gmail.com';
     const dashboardUrl = `${process.env.FRONTEND_URL}/admin/shows`;
 
-    const mailOptions = {
-        from: `"BUG Radio" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-        to: adminEmail,
-        subject: `🆕 New Show Request: "${showTitle}"`,
-        html: `
+    try {
+        const info = await sendEmail({
+            to: adminEmail,
+            subject: `🆕 New Show Request: "${showTitle}"`,
+            html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -426,22 +355,18 @@ const sendNewShowRequestEmail = async (artistName, artistEmail, showTitle, showD
           <div class="header"><h1>🆕 New Show Request</h1></div>
           <div class="content">
             <h2>A new show request needs your review!</h2>
-            
             <div class="info-box">
               <p><strong>📻 Show Title:</strong> ${showTitle}</p>
               <p><strong>👤 Artist:</strong> ${artistName}</p>
               <p><strong>📧 Email:</strong> ${artistEmail}</p>
             </div>
-            
             ${showDescription ? `
               <div class="info-box">
                 <strong>📝 Description:</strong>
                 <p style="margin: 10px 0 0;">${showDescription.substring(0, 300)}${showDescription.length > 300 ? '...' : ''}</p>
               </div>
             ` : ''}
-            
             <p>Please review this request and approve or reject it.</p>
-            
             <div style="text-align: center;">
               <a href="${dashboardUrl}" class="button">Review Request</a>
             </div>
@@ -449,12 +374,8 @@ const sendNewShowRequestEmail = async (artistName, artistEmail, showTitle, showD
         </div>
       </body>
       </html>
-    `
-    };
-
-    try {
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email notifica admin inviata:', info.messageId);
+    `,
+        });
         return { success: true, messageId: info.messageId };
     } catch (error) {
         console.error('❌ Errore invio email notifica admin:', error);
@@ -463,12 +384,11 @@ const sendNewShowRequestEmail = async (artistName, artistEmail, showTitle, showD
 };
 
 module.exports = {
-    transporter,
     sendVerificationEmail,
     sendWelcomeEmail,
     sendShowApprovedEmail,
     sendShowRejectedEmail,
     sendPasswordResetEmail,
     sendPasswordChangedEmail,
-    sendNewShowRequestEmail
+    sendNewShowRequestEmail,
 };

@@ -3,7 +3,6 @@ const router = express.Router();
 const Episode = require('../models/Episode');
 const Show = require('../models/Shows');
 const Post = require('../models/Post');
-
 // Middleware per passare il path corrente
 router.use((req, res, next) => {
     res.locals.currentPath = req.path;
@@ -133,6 +132,31 @@ router.get('/about', async (req, res) => {
         res.status(500).send('Errore server');
     }
 });
+
+// Gallery
+router.get('/gallery', async (req, res) => {
+    try {
+        const posts = await Post.find({
+            status: 'published',
+            'image.url': { $exists: true, $ne: null }
+        })
+            .sort({ createdAt: -1 })
+            .select('title slug image category excerpt content publishedAt');
+
+        // Raggruppa per categoria
+        const categories = ['all', 'event', 'news', 'announcement', 'blog'];
+
+        res.render('gallery', {
+            title: 'Gallery - BUG Radio',
+            posts: JSON.stringify(posts),
+            categories
+        });
+    } catch (err) {
+        console.error('Gallery error:', err);
+        res.status(500).send('Errore server');
+    }
+});
+
 // Show singolo
 router.get('/shows/:slug', async (req, res) => {
     try {

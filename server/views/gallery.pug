@@ -1,0 +1,126 @@
+extends layout
+
+block content
+    section.gallery-page(
+        x-data="galleryApp()"
+        x-init="init()"
+    )
+        .gallery-header
+            h1 GALLERY
+
+            .gallery-filters
+                template(x-for="cat in categories" :key="cat")
+                    button.filter-btn(
+                        :class="{ active: activeFilter === cat }"
+                        @click="setFilter(cat)"
+                        x-text="cat.toUpperCase()"
+                    )
+
+        .gallery-grid
+            template(x-for="(post, index) in filteredPosts" :key="post._id")
+                button.gallery-item(
+                    @click="openLightbox(index)"
+                    :aria-label="`Apri ${post.title}`"
+                )
+                    img(:src="post.image.url" :alt="post.title" loading="lazy")
+                    .gallery-overlay
+                        span.gallery-title(x-text="post.title")
+                        span.gallery-category(x-text="post.category.toUpperCase()")
+
+        .gallery-empty(x-show="filteredPosts.length === 0")
+            p No images available for this category.
+
+        //- LIGHTBOX CARD
+        .lightbox(
+            x-show="lightboxOpen"
+            x-transition:enter="lb-enter"
+            x-transition:enter-start="lb-enter-start"
+            x-transition:enter-end="lb-enter-end"
+            x-transition:leave="lb-leave"
+            x-transition:leave-start="lb-leave-end"
+            x-transition:leave-end="lb-enter-start"
+            @keydown.escape.window="closeLightbox()"
+            @keydown.arrow-left.window="prev()"
+            @keydown.arrow-right.window="next()"
+        )
+            .lightbox-backdrop(@click="closeLightbox()")
+
+            .lightbox-card
+                //- Chiudi
+                button.lightbox-close(@click="closeLightbox()" aria-label="Chiudi")
+                    i.fa-solid.fa-xmark
+
+                //- Colonna immagine
+                .lightbox-card__image
+                    img(
+                        :src="filteredPosts[currentIndex]?.image.url"
+                        :alt="filteredPosts[currentIndex]?.title"
+                    )
+
+                    //- Frecce
+                    button.lightbox-arrow.lightbox-arrow--prev(@click="prev()" aria-label="Precedente")
+                        i.fa-solid.fa-chevron-left
+                    button.lightbox-arrow.lightbox-arrow--next(@click="next()" aria-label="Successivo")
+                        i.fa-solid.fa-chevron-right
+
+                //- Colonna testo
+                .lightbox-card__body
+                    .lightbox-card__body
+                        .lightbox-card__meta
+                            span.lightbox-category(x-text="filteredPosts[currentIndex]?.category.toUpperCase()")
+                            span.lightbox-counter(x-text="`${currentIndex + 1} / ${filteredPosts.length}`")
+
+                        h2.lightbox-card__title(x-text="filteredPosts[currentIndex]?.title")
+
+                        p.lightbox-card__excerpt(
+                            x-show="filteredPosts[currentIndex]?.excerpt"
+                            x-text="filteredPosts[currentIndex]?.excerpt"
+                        )
+
+                        .lightbox-card__text(x-html="filteredPosts[currentIndex]?.content")
+
+    script.
+        function galleryApp() {
+            return {
+                posts: [],
+                categories: ['all', 'event', 'news', 'announcement', 'blog'],
+                activeFilter: 'all',
+                lightboxOpen: false,
+                currentIndex: 0,
+
+                init() {
+                    this.posts = !{posts};
+                },
+
+                setFilter(cat) {
+                    this.activeFilter = cat;
+                    this.currentIndex = 0;
+                },
+
+                get filteredPosts() {
+                    if (this.activeFilter === 'all') return this.posts;
+                    return this.posts.filter(p => p.category === this.activeFilter);
+                },
+
+                openLightbox(index) {
+                    this.currentIndex = index;
+                    this.lightboxOpen = true;
+                    document.body.classList.add('lightbox-is-open');
+                },
+
+                closeLightbox() {
+                    this.lightboxOpen = false;
+                    document.body.classList.remove('lightbox-is-open');
+                },
+
+                prev() {
+                    const len = this.filteredPosts.length;
+                    this.currentIndex = (this.currentIndex - 1 + len) % len;
+                },
+
+                next() {
+                    const len = this.filteredPosts.length;
+                    this.currentIndex = (this.currentIndex + 1) % len;
+                }
+            }
+        }

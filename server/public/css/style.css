@@ -1961,3 +1961,389 @@ body.menu-open {
         height: 90px;
     }
 }
+/* ==================== GALLERY PAGE ==================== */
+.gallery-page {
+    padding: 0;
+}
+
+.gallery-header {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.gallery-header h1 {
+    font-size: 80px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -4px;
+    color: var(--color-black);
+}
+
+/* Filtri */
+.gallery-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid var(--color-black);
+    border-radius: 50px;
+    background: transparent;
+    color: var(--color-black);
+    cursor: pointer;
+    transition:
+            background var(--transition-base),
+            color var(--transition-base),
+            border-color var(--transition-base);
+}
+
+.filter-btn:hover {
+    background: var(--color-black);
+    color: var(--color-white);
+}
+
+.filter-btn.active {
+    background: var(--color-purple);
+    border-color: var(--color-purple);
+    color: var(--color-white);
+}
+
+/* Griglia */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+/* Item */
+.gallery-item {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--color-light-gray);
+    display: block;
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-slow);
+}
+
+.gallery-item:hover img {
+    transform: scale(1.06);
+}
+
+/* Overlay */
+.gallery-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 16px;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+
+.gallery-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-white);
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+.gallery-category {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    color: var(--color-yellow);
+    text-transform: uppercase;
+}
+
+/* Stato vuoto */
+.gallery-empty {
+    grid-column: 1 / -1;
+    padding: 48px 0;
+    text-align: center;
+    color: var(--color-gray);
+    font-size: 1rem;
+}
+
+/* Transizioni Alpine */
+.gallery-enter {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.gallery-enter-start {
+    opacity: 0;
+    transform: scale(0.96);
+}
+.gallery-enter-end {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .gallery-header h1 {
+        font-size: 56px;
+        letter-spacing: -2px;
+    }
+
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-header h1 {
+        font-size: 40px;
+    }
+
+    .gallery-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .gallery-overlay {
+        opacity: 1;
+    }
+
+    .filter-btn {
+        padding: 6px 14px;
+        font-size: 12px;
+    }
+}
+
+/* ==================== LIGHTBOX CARD ==================== */
+body.lightbox-is-open {
+    overflow: hidden;
+}
+
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    cursor: pointer;
+}
+
+/* Card principale */
+.lightbox-card {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+    max-width: 1366px;
+    max-height: 85vh;
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+}
+.lightbox-card__excerpt {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-black);
+    line-height: 1.5;
+    margin: 0;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-light-gray);
+}
+img {
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
+}
+.lightbox-card__text p { margin-bottom: 12px; }
+.lightbox-card__text p:last-child { margin-bottom: 0; }
+.lightbox-card__text strong { font-weight: 700; }
+.lightbox-card__text a { text-decoration: underline; }
+/* Colonna immagine */
+.lightbox-card__image {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-light-gray);
+    min-height: 320px;
+}
+
+.lightbox-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Colonna testo */
+.lightbox-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 40px 36px;
+    overflow-y: auto;
+}
+
+.lightbox-card__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.lightbox-category {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--color-purple);
+    text-transform: uppercase;
+}
+
+.lightbox-counter {
+    font-size: 0.75rem;
+    color: var(--color-gray);
+    font-weight: 500;
+}
+
+.lightbox-card__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-black);
+    margin: 0;
+}
+
+.lightbox-card__text {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--color-gray);
+    margin: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Frecce - sopra l'immagine */
+.lightbox-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: var(--radius-full);
+    color: var(--color-white);
+    font-size: 14px;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.35);
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+    z-index: 2;
+}
+
+.lightbox-arrow:hover {
+    background: var(--color-purple);
+    border-color: var(--color-purple);
+}
+
+.lightbox-arrow--prev { left: 12px; }
+.lightbox-arrow--next { right: 12px; }
+
+/* Tasto chiudi */
+.lightbox-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-full);
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--color-white);
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 10;
+    transition: background var(--transition-fast);
+}
+
+.lightbox-close:hover {
+    background: var(--color-coral);
+}
+
+/* Transizioni */
+.lb-enter { transition: opacity 0.2s ease, transform 0.2s ease; }
+.lb-enter-start { opacity: 0; transform: scale(0.96); }
+.lb-enter-end { opacity: 1; transform: scale(1); }
+.lb-leave { transition: opacity 0.2s ease; }
+.lb-leave-end { opacity: 0; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .lightbox {
+        padding: 16px;
+        align-items: center;
+    }
+
+    .lightbox-card {
+        grid-template-columns: 1fr;
+        max-height: 90vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .lightbox-card__image {
+        min-height: 220px;
+        max-height: 280px;
+    }
+
+    .lightbox-card__body {
+        padding: 24px 20px;
+        gap: 12px;
+    }
+
+    .lightbox-card__title {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .lightbox-card__image {
+        min-height: 180px;
+        max-height: 220px;
+    }
+
+    .lightbox-card__title {
+        font-size: 1rem;
+    }
+
+    .lightbox-card__text {
+        font-size: 0.85rem;
+    }
+}
