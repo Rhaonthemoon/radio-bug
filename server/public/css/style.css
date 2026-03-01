@@ -1,7 +1,7 @@
 /* ==================== VARIABLES ==================== */
 :root {
     --color-black: #1a1a1a;
-    --color-white: #ffffff;
+    --color-white: rgba(255, 255, 255, 0.89);
     --color-yellow: #f5c518;
     --color-coral: #ff6b6b;
     --color-cyan: #4ecdc4;
@@ -46,7 +46,7 @@ body {
 /* Layer sfondo sinistro indipendente dalla cartella sfondi-sx */
 body::before {
     content: '';
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     width: 20%;
@@ -56,7 +56,7 @@ body::before {
     background-position: top left;
     background-size: 100% auto;
     z-index: -1;
-    opacity: 0.5;
+    opacity: 0.8;
     pointer-events: none;
 }
 
@@ -70,7 +70,9 @@ img { max-width: 100%; height: auto; display: block; }
     margin: 0 auto;
     padding: 0 24px;
 }
-
+main {
+    background-color: rgb(255 255 255 / 98%);
+}
 /* ==================== HEADER ==================== */
 .site-header {
     position: fixed;
@@ -219,8 +221,8 @@ main {
 
 /* ==================== SECTION TITLES ==================== */
 .section-title {
-    font-size: 32px;
-    margin-bottom: 24px;
+    flex: 0 0 300px;
+    margin: auto;
 }
 
 .title-box {
@@ -285,7 +287,7 @@ main {
 
 .card-grid--compact {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    gap: 0px;
 }
 
 /* Base Card */
@@ -602,7 +604,6 @@ main {
 .about-content p {
     margin-bottom: 16px;
     color: var(--color-gray);
-    background: rgba(255, 255, 255, 0.9);
 }
 
 .read-more {
@@ -1546,7 +1547,10 @@ body.menu-open {
     overflow: hidden;
 }
 .section-title {
-    flex: 0 0 500px;  /* grow: 0, shrink: 0, basis: 500px */
+    flex: 0 0 300px;  /* grow: 0, shrink: 0, basis: 500px */
+}
+.card-home{
+    padding: 1rem 0.75rem;
 }
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 900px) {
@@ -1593,7 +1597,12 @@ body.menu-open {
     .main-nav {
         display: none;
     }
-
+    body::before {
+        display: none;
+    }
+    body {
+        background-size: 100%;
+    }
     .hamburger-btn {
         display: flex !important;
     }
@@ -1731,7 +1740,7 @@ body.menu-open {
 .about-layout {
     display: grid;
     grid-template-columns: 350px 1fr;
-    gap: 40px;
+    gap: 20px;
     align-items: start;
 }
 
@@ -1916,7 +1925,6 @@ body.menu-open {
 @media (max-width: 900px) {
     .about-layout {
         grid-template-columns: 1fr;
-        gap: 40px;
     }
 
     .about-sidebar {

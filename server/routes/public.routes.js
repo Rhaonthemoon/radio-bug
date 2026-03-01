@@ -344,4 +344,26 @@ function generateCalendarDays(year, month, groupedByDate) {
     return calendarDays;
 }
 
+// Open Call
+router.get('/open-call', (req, res) => {
+    res.render('open-call', {
+        title: 'Open Call - BUG Radio'
+    });
+});
+
+// Education
+router.get('/education', (req, res) => {
+    res.render('education', {
+        title: 'Education - BUG Radio'
+    });
+});
+
+// Partners
+router.get('/partners', (req, res) => {
+    res.render('partners', {
+        title: 'Partners - BUG Radio',
+        partners: [] // populate from DB when a Partner model is available
+    });
+});
+
 module.exports = router;

@@ -39,15 +39,21 @@ block content
     section.hero
         .about-preview
             .section-title
-                img.about-content(src="/public/assets/blob-about.gif")
+                img.about-blob-img(src="/public/assets/blob-about.gif")
             .about-content
-                p BUG Radio is on a mission to create a dynamic and interactive community radio in The Hague and it is striving to truly be a community radio, exploring the boundaries of radio as a medium for artistic expression and community connection.
+                p
+                    strong BUG Radio
+                    | is launched its website during On Air - On Site Radio Festival, with a starter set of two shows. From the November 2024 on, it will air regular shows from a variety of radio-makers, and host live events too. BUG Radio is on a mission to create a dynamic and interactive community radio in The Hague and it is striving to truly be community radio, exploring the boundaries of radio as a medium for artistic expression and community connection. Through a series of curated radio events and live broadcasts, we seek to create a space for experimental music practices, interdisciplinary collaborations, and sonic exploration.
+
+                p
+                    strong BUG Radio
+                    | is driven by a strong belief in the transformative power of radio as a public platform for artistic engagement and community building. By embracing radio as a tool for storytelling and cultural exchange, we aim to celebrate the diversity of voices within our community. Through our radio shows and collaborative projects with artists and musicians, we strive to create a space where everyone's voice matters.
                 a.read-more(href="/about") ▶ READ MORE
 
     section.main-content
         .schedule-section
             h2.section-title
-                span.title-schedule SCHEDULE (CET)
+                img.about-blob-img(src="/public/assets/blob-schedule.png")
 
             if scheduleByDay && scheduleByDay.length
                 each dayGroup in scheduleByDay
@@ -66,9 +72,12 @@ block content
                 span.title-shows SHOWS
 
             if shows && shows.length
-                .card-grid.card-grid--compact
-                    each show in shows.slice(0, 4)
-                        +show-card(show, 'compact')
+                each show in shows.slice(0, 4)
+                    a.card.card--show.card-home(href=`/shows/${show.slug}`)
+                        .card-grid.card-grid--compact
+                                strong= show.artist.name
+                                if show.artist.bio && cardSize !== 'compact'
+                                    span.card__artist-bio= show.artist.bio.substring(0, 60) + (show.artist.bio.length > 60 ? '...' : '')
             else
                 p.no-shows No shows available yet
 

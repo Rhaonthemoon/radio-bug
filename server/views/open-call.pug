@@ -1,0 +1,28 @@
+extends layout
+
+block content
+    section.about-page-new
+        .about-layout
+            //- Left side - Blob only (no events, no player)
+            .about-sidebar
+                img.about-blob-img(src="/public/assets/open-call.gif" alt="Open Call")
+
+                .sidebar-cta
+                    a.events-btn(href="mailto:info@bugradio.org")
+                        span INVIA LA TUA
+                        span PROPOSTA
+
+            //- Right side - Content
+            .about-content-section
+                .faq-section
+                    .faq-item
+                        h3.faq-question How do I apply?
+                        p.faq-answer
+                            | At BUG Radio, we are passionate about showcasing the vibrant and diverse voices within our community. We invite experienced artists and first-time radio makers alike to send us their work. You will find specific information about formats and technical requirements when you click on the Submit Your Show Button to answer the Open Call. If you have any questions simply send us an email at
+                            |
+                            a(href="mailto:info@bugradio.org") info@bugradio.org
+
+                    .faq-item
+                        h3.faq-question Are there genre limitations?
+                        p.faq-answer
+                            | There are no general genre limitations. You may send us anything from soundart to radio drama to spoken word experiments or conversations within your community. If in doubt whether your work fits in simply contact us and we will have a look at your ideas. Needless to say, but we will say it anyway: There are no limitations on age, nationality, or ethnic background. You may submit shows in any language.

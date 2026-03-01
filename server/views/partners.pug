@@ -1,0 +1,342 @@
+extends layout
+
+block content
+    h1.section-title
+        img.about-blob-img(src="/public/assets/partners-blob.png")
+    section.partners-page(
+        x-data=`{
+            current: 0,
+            total: 4,
+            autoplayInterval: null,
+            partners: [
+                {
+                    name: 'On Air – On Site',
+                    logo: '/public/assets/partners/onair-onsite.png',
+                    url: 'https://onair-onsite.nl'
+                },
+                {
+                    name: 'West Den Haag',
+                    logo: '/public/assets/partners/west_logo.png',
+                    url: 'https://westdenhaag.nl'
+                },
+                {
+                    name: 'Creative Industries Fund NL',
+                    logo: '/public/assets/partners/creative_industries_fund_nl_logo.png',
+                    url: 'https://stimuleringsfonds.nl'
+                },
+                {
+                    name: 'Institute of Sonology',
+                    logo: '/public/assets/partners/sonology_logo.png',
+                    url: 'https://sonology.org'
+                }
+            ],
+
+            init() {
+                this.startAutoplay();
+            },
+
+            startAutoplay() {
+                this.autoplayInterval = setInterval(() => {
+                    this.next();
+                }, 3000);
+            },
+
+            stopAutoplay() {
+                clearInterval(this.autoplayInterval);
+            },
+
+            next() {
+                this.current = (this.current + 1) % this.total;
+            },
+
+            prev() {
+                this.current = (this.current - 1 + this.total) % this.total;
+            },
+
+            goTo(index) {
+                this.stopAutoplay();
+                this.current = index;
+                this.startAutoplay();
+            }
+        }`
+        x-init="init()"
+    )
+
+        //- ── CAROUSEL ──────────────────────────────────────────────
+        .partners-carousel(@mouseenter="stopAutoplay()" @mouseleave="startAutoplay()")
+
+            //- Slides
+            .carousel-track
+                template(x-for="(partner, index) in partners" :key="index")
+                    .carousel-slide(
+                        :class="{ active: current === index, prev: (current - 1 + total) % total === index, next: (current + 1) % total === index }"
+                    )
+                        a.carousel-logo-link(
+                            :href="partner.url"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            :aria-label="partner.name"
+                        )
+                            img.carousel-logo(
+                                :src="partner.logo"
+                                :alt="partner.name"
+                            )
+
+            //- Arrows
+            button.carousel-arrow.carousel-arrow--prev(@click="prev()" aria-label="Previous")
+                i.fa-solid.fa-chevron-left
+
+            button.carousel-arrow.carousel-arrow--next(@click="next()" aria-label="Next")
+                i.fa-solid.fa-chevron-right
+
+            //- Partner name under logo
+            .carousel-label
+                template(x-for="(partner, index) in partners" :key="index")
+                    span.carousel-partner-name(
+                        x-show="current === index"
+                        x-text="partner.name"
+                    )
+
+            //- Dots
+            .carousel-dots
+                template(x-for="(partner, index) in partners" :key="index")
+                    button.carousel-dot(
+                        :class="{ active: current === index }"
+                        @click="goTo(index)"
+                        :aria-label="partner.name"
+                    )
+
+        //- ── LOGO MAP ──────────────────────────────────────────────
+        .partners-map
+            h2.partners-map-title SUPPORTED BY
+
+            .partners-map-grid
+                template(x-for="(partner, index) in partners" :key="index")
+                    button.partners-map-item(
+                        @click="goTo(index)"
+                        :class="{ active: current === index }"
+                        :aria-label="partner.name"
+                    )
+                        img.partners-map-logo(
+                            :src="partner.logo"
+                            :alt="partner.name"
+                        )
+                        span.partners-map-name(x-text="partner.name")
+
+    style.
+        /* ── PARTNERS PAGE ────────────────────────── */
+        .partners-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 80vh;
+            padding: 4rem 1.5rem;
+            gap: 5rem;
+        }
+
+        /* ── CAROUSEL ─────────────────────────────── */
+        .partners-carousel {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .carousel-track {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .carousel-slide {
+            position: absolute;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(80px) scale(0.85);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .carousel-slide.prev {
+            opacity: 0.2;
+            transform: translateX(-120px) scale(0.7);
+        }
+
+        .carousel-slide.active {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            pointer-events: auto;
+            z-index: 2;
+        }
+
+        .carousel-slide.next {
+            opacity: 0.2;
+            transform: translateX(120px) scale(0.7);
+        }
+
+        .carousel-logo-link {
+            display: block;
+            background: white;
+            padding: 1.5rem;
+        }
+
+        .carousel-logo {
+            max-width: 340px;
+            max-height: 180px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            /* Se il sito ha sfondo scuro, decommentare per invertire i loghi neri: */
+            /* filter: invert(1); */
+            transition: transform 0.3s ease;
+        }
+
+        .carousel-logo:hover {
+            transform: scale(1.05);
+        }
+
+        /* Arrows */
+        .carousel-arrow {
+            position: absolute;
+            top: calc(50% - 2rem);
+            transform: translateY(-50%);
+            background: none;
+            border: 1px solid currentColor;
+            color: inherit;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+
+        .carousel-arrow:hover { opacity: 1; }
+
+        .carousel-arrow--prev { left: 0; }
+        .carousel-arrow--next { right: 0; }
+
+        /* Label */
+        .carousel-label {
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            min-height: 1.4em;
+            text-align: center;
+            opacity: 0.5;
+        }
+
+        /* Dots */
+        .carousel-dots {
+            display: flex;
+            gap: 0.7rem;
+        }
+
+        .carousel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: none;
+            background: currentColor;
+            opacity: 0.2;
+            cursor: pointer;
+            padding: 0;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .carousel-dot.active {
+            opacity: 1;
+            transform: scale(1.5);
+        }
+
+        /* ── LOGO MAP ──────────────────────────────── */
+        .partners-map {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(128,128,128,0.2);
+        }
+
+        .partners-map-title {
+            font-size: 0.7rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            opacity: 0.35;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .partners-map-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem 2.5rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .partners-map-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            background: none;
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+            transition: border-color 0.25s, opacity 0.25s;
+            opacity: 0.35;
+        }
+
+        .partners-map-item:hover { opacity: 0.75; }
+
+        .partners-map-item.active {
+            opacity: 1;
+            border-color: currentColor;
+        }
+
+        .partners-map-logo {
+            max-width: 90px;
+            max-height: 45px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            /* filter: invert(1); */
+        }
+
+        .partners-map-name {
+            font-size: 0.6rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            opacity: 0.6;
+            text-align: center;
+            max-width: 110px;
+            line-height: 1.4;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .carousel-track { height: 160px; }
+            .carousel-logo { max-width: 200px; max-height: 110px; }
+            .carousel-arrow--prev { left: -0.25rem; }
+            .carousel-arrow--next { right: -0.25rem; }
+            .partners-map-logo { max-width: 70px; max-height: 38px; }
+            .partners-map-item { padding: 0.5rem 0.75rem; }
+        }

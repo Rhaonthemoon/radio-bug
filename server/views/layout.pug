@@ -162,79 +162,67 @@ html(lang="en")
                     isLive: false,
                     streamUrl: 'https://bugradio2024.out.airtime.pro/bugradio2024_a',
                     apiUrl: 'https://bugradio2024.airtime.pro/api/live-info-v2',
-                    currentTrack: {
-                        title: '',
-                        artist: ''
-                    },
+                    currentTrack: {title: '', artist: ''},
                     currentShow: '',
                     metadataInterval: null,
-                    streamCheckInterval: null,
 
                     init() {
-                        this.checkStream();
                         this.fetchMetadata();
-
-                        // Check stream status every 30 seconds
-                        this.streamCheckInterval = setInterval(() => this.checkStream(), 30000);
-
-                        // Fetch metadata every 10 seconds
-                        this.metadataInterval = setInterval(() => this.fetchMetadata(), 10000);
+                        this.metadataInterval = setInterval(() => this.fetchMetadata(), 15000);
                     },
 
                     togglePlay() {
                         if (this.playing) {
                             this.$refs.audio.pause();
+                            this.$refs.audio.src = '';
                         } else {
-                            this.$refs.audio.play();
+                            this.$refs.audio.src = this.streamUrl;
+                            this.$refs.audio.play().catch(() => {
+                            });
                         }
                         this.playing = !this.playing;
                     },
 
-                    checkStream() {
-                        const testAudio = new Audio(this.streamUrl);
-                        testAudio.volume = 0;
-
-                        testAudio.play()
-                            .then(() => {
-                                testAudio.pause();
-                                this.isLive = true;
-                            })
-                            .catch(() => {
-                                this.isLive = false;
-                                this.currentTrack = { title: '', artist: '' };
-                                this.currentShow = '';
-                            });
-                    },
-
                     async fetchMetadata() {
-                        if (!this.isLive) return;
-
                         try {
-                            const response = await fetch(this.apiUrl);
+                            const response = await fetch(this.apiUrl, {cache: 'no-store'});
+                            if (!response.ok) throw new Error('API error');
                             const data = await response.json();
 
-                            // Get current track info
-                            if (data.tracks && data.tracks.current) {
-                                const track = data.tracks.current;
-                                this.currentTrack = {
-                                    title: track.name || '',
-                                    artist: track.metadata?.artist || ''
-                                };
+                            const currentShow = data.shows?.current;
+                            const currentTrack = data.tracks?.current;
+
+                            // Lo stream è live solo se l'API riporta uno show attivo
+                            this.isLive = !!(currentShow && currentShow.name);
+
+                            if (!this.isLive) {
+                                this.currentTrack = {title: '', artist: ''};
+                                this.currentShow = '';
+                                // Se stava suonando, ferma
+                                if (this.playing) {
+                                    this.$refs.audio.pause();
+                                    this.$refs.audio.src = '';
+                                    this.playing = false;
+                                }
+                                return;
                             }
 
-                            // Get current show info
-                            if (data.shows && data.shows.current) {
-                                this.currentShow = data.shows.current.name || '';
-                            } else {
-                                this.currentShow = '';
-                            }
+                            this.currentTrack = {
+                                title: currentTrack?.name || '',
+                                artist: currentTrack?.metadata?.artist || ''
+                            };
+                            this.currentShow = currentShow?.name || '';
 
                         } catch (error) {
-                            console.warn('Could not fetch metadata:', error);
+                            // Nessuna risposta dall'API → offline
+                            this.isLive = false;
+                            this.currentTrack = {title: '', artist: ''};
+                            this.currentShow = '';
                         }
                     }
                 }
             }
+
 
         main
             block content
