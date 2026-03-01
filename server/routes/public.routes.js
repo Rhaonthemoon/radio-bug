@@ -20,53 +20,59 @@ router.get('/', async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(8);
 
-        // Schedule: prossimi episodi (da oggi in poi, max 5 giorni)
+        // Schedule: prossimi 5 episodi da oggi in poi
         const now = new Date();
         now.setHours(0, 0, 0, 0);
 
-        const maxDate = new Date(now);
-        maxDate.setDate(maxDate.getDate() + 5); // Prossimi 5 giorni
-
         const upcomingEpisodes = await Episode.find({
             status: 'published',
-            airDate: { $gte: now, $lt: maxDate }
+            airDate: { $gte: now }
         })
-            .populate('showId', 'title')
-            .sort({ airDate: 1 });
+            .populate('showId', 'title slug image')
+            .sort({ airDate: 1 })
+            .limit(5);
 
-        // Raggruppa episodi per giorno
+        // Raggruppa episodi per giorno — stessa struttura di /schedule
         const scheduleByDay = [];
         const groupedByDate = {};
 
         upcomingEpisodes.forEach(episode => {
             const airDate = new Date(episode.airDate);
-            const dateKey = airDate.toLocaleDateString('en-GB', {
+            const dateKey = `${airDate.getFullYear()}-${String(airDate.getMonth()+1).padStart(2,'0')}-${String(airDate.getDate()).padStart(2,'0')}`;
+            const displayDate = airDate.toLocaleDateString('en-GB', {
+                weekday: 'long',
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
             });
 
             if (!groupedByDate[dateKey]) {
-                groupedByDate[dateKey] = [];
+                groupedByDate[dateKey] = {
+                    dateKey,
+                    date: displayDate,
+                    episodes: []
+                };
             }
 
-            groupedByDate[dateKey].push({
+            groupedByDate[dateKey].episodes.push({
+                id: episode._id,
                 time: airDate.toLocaleTimeString('en-GB', {
                     hour: '2-digit',
                     minute: '2-digit'
                 }),
                 title: episode.title,
-                showTitle: episode.showId?.title || null
+                showTitle: episode.showId?.title || null,
+                showSlug: episode.showId?.slug || null,
+                showImage: episode.showId?.image?.url || null,
+                description: episode.description || null
             });
         });
 
-        // Converti in array ordinato
-        for (const date in groupedByDate) {
-            scheduleByDay.push({
-                date: date,
-                episodes: groupedByDate[date]
-            });
+        // Converti in array ordinato per data
+        for (const dateKey in groupedByDate) {
+            scheduleByDay.push(groupedByDate[dateKey]);
         }
+        scheduleByDay.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
         res.render('home', {
             title: 'BUG Radio',
@@ -238,7 +244,7 @@ router.get('/schedule', async (req, res) => {
             status: 'published',
             airDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
         })
-            .populate('showId', 'title slug')
+            .populate('showId', 'title slug image')
             .sort({ airDate: 1 });
 
         // Raggruppa episodi per giorno
@@ -247,7 +253,7 @@ router.get('/schedule', async (req, res) => {
 
         monthEpisodes.forEach(episode => {
             const airDate = new Date(episode.airDate);
-            const dateKey = airDate.toISOString().split('T')[0]; // YYYY-MM-DD per ordinamento
+            const dateKey = `${airDate.getFullYear()}-${String(airDate.getMonth()+1).padStart(2,'0')}-${String(airDate.getDate()).padStart(2,'0')}`;
             const displayDate = airDate.toLocaleDateString('en-GB', {
                 weekday: 'long',
                 day: 'numeric',
@@ -273,6 +279,7 @@ router.get('/schedule', async (req, res) => {
                 title: episode.title,
                 showTitle: episode.showId?.title || null,
                 showSlug: episode.showId?.slug || null,
+                showImage: episode.showId?.image?.url || null,
                 description: episode.description || null
             });
         });

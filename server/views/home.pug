@@ -2,40 +2,6 @@ extends layout
 include mixins
 
 block content
-    .container(style="max-width: 480px;")
-        .player(x-data="radioPlayer()" x-init="init()")
-            .player-controls
-                audio#player-audio(
-                    x-ref="audio"
-                    :src="streamUrl"
-                    preload="none"
-                    crossorigin="anonymous"
-                )
-                button.btn-play(@click="togglePlay()")
-                    i.fa-solid.fa-play(x-show="!playing")
-                    i.fa-solid.fa-pause(x-show="playing")
-            #visualizer.audio-visualizer
-            .player-status
-                .live-indicator(:class="isLive ? 'on-air' : 'offline'")
-                    span(x-text="isLive ? 'ON AIR' : 'OFF'")
-                    i.fa-regular.fa-circle-dot(:style="{ color: isLive ? '#e53935' : '#333' }")
-
-        //- Now Playing Metadata
-        .now-playing(x-show="isLive")
-            template(x-if="currentTrack.title")
-                .now-playing-content
-                    .now-playing-label NOW PLAYING
-                    .track-info
-                        span.track-title(x-text="currentTrack.title")
-                        template(x-if="currentTrack.artist")
-                            span.track-artist
-                                | —
-                                span(x-text="currentTrack.artist")
-                    template(x-if="currentShow")
-                        .show-name(x-text="currentShow")
-            template(x-if="!currentTrack.title && isLive")
-                .metadata-loading Loading...
-
     section.hero
         .about-preview
             .section-title
@@ -75,10 +41,237 @@ block content
                 each show in shows.slice(0, 4)
                     a.card.card--show.card-home(href=`/shows/${show.slug}`)
                         .card-grid.card-grid--compact
-                                strong= show.artist.name
-                                if show.artist.bio && cardSize !== 'compact'
-                                    span.card__artist-bio= show.artist.bio.substring(0, 60) + (show.artist.bio.length > 60 ? '...' : '')
+                            strong= show.artist.name
+                            if show.artist.bio && cardSize !== 'compact'
+                                span.card__artist-bio= show.artist.bio.substring(0, 60) + (show.artist.bio.length > 60 ? '...' : '')
             else
                 p.no-shows No shows available yet
 
             a.read-more(href="/shows") ▶ SEE ALL SHOWS
+
+    //- ── EASY LANGUAGE TOOLTIPS ───────────────────────────────────
+    .easy-language-bar(
+        x-data="{ open: null }"
+        @keydown.escape.window="open = null"
+    )
+        .easy-lang-trigger
+            button.easy-lang-btn.easy-lang-btn--en(
+                @click="open = open === 'en' ? null : 'en'"
+                :class="{ active: open === 'en' }"
+            ) EASY LANGUAGE
+            .easy-lang-tooltip.easy-lang-tooltip--en(
+                x-show="open === 'en'"
+                x-transition:enter="tt-enter"
+                x-transition:enter-start="tt-start"
+                x-transition:enter-end="tt-end"
+                x-transition:leave="tt-enter"
+                x-transition:leave-start="tt-end"
+                x-transition:leave-end="tt-start"
+                role="tooltip"
+            )
+                button.easy-lang-close(@click="open = null" aria-label="Close")
+                    i.fa-solid.fa-xmark
+                p
+                    | BUG RADIO IS AN ONLINE RADIO PROJECT THAT IS FOR PEOPLE WHO WANT TO LISTEN TO NEW AND DIFFERENT THINGS FROM ALL OVER THE WORLD. IT IS ALSO FOR ANYONE WHO WANTS TO MAKE RADIO. PEOPLE CAN MAKE A RADIO SHOW WITH LIVE MUSIC PERFORMANCES, OR ABOUT THINGS THEY FIND INTERESTING.
+                p
+                    | PEOPLE CAN MAKE A RADIO SHOW IF THEY WANT TO TELL STORIES OR TALK ABOUT SOMETHING THAT IS IMPORTANT TO THEM, OR IF THEY WANT TO TRY SOMETHING OUT WITH SOUNDS THEY RECORD, OR THEIR VOICE. BUG RADIO IS FOR RADIO MAKERS WHO HAVE A LOT OF EXPERIENCE AND PEOPLE WHO WANT TO TRY BEING A RADIO MAKER FOR THE FIRST TIME. PEOPLE OF ANY AGE OR NATIONALITY ARE WELCOME, AND THE SHOW CAN BE IN ANY LANGUAGE.
+                p
+                    | IF YOU CLICK&nbsp;
+                    a(href="/open-call") HERE
+                    | &nbsp;YOU CAN SEND AN IDEA FOR A SHOW THAT YOU WANT TO MAKE. IT SHOULD BE 15 OR 30 OR 45 OR 60 MINUTES LONG.
+                p
+                    | YOU CAN ALSO SEND US AN EMAIL TO&nbsp;
+                    a(href="mailto:info@bugradio.org") INFO@BUGRADIO.ORG
+                    | . WE ARE ALSO ON&nbsp;
+                    a(href="https://instagram.com/bugradio" target="_blank") INSTAGRAM
+                    | &nbsp;AND&nbsp;
+                    a(href="https://facebook.com/bugradio" target="_blank") FACEBOOK
+                    | .
+
+        .easy-lang-trigger
+            button.easy-lang-btn.easy-lang-btn--nl(
+                @click="open = open === 'nl' ? null : 'nl'"
+                :class="{ active: open === 'nl' }"
+            ) MAKKELIJKE TAAL
+            .easy-lang-tooltip.easy-lang-tooltip--nl(
+                x-show="open === 'nl'"
+                x-transition:enter="tt-enter"
+                x-transition:enter-start="tt-start"
+                x-transition:enter-end="tt-end"
+                x-transition:leave="tt-enter"
+                x-transition:leave-start="tt-end"
+                x-transition:leave-end="tt-start"
+                role="tooltip"
+            )
+                button.easy-lang-close(@click="open = null" aria-label="Sluiten")
+                    i.fa-solid.fa-xmark
+                p
+                    | BUG RADIO IS EEN ONLINE RADIOPROJECT VOOR MENSEN DIE WILLEN LUISTEREN NAAR NIEUWE MUZIEK. HET IS OOK VOOR IEDEREEN DIE RADIO WIL MAKEN. HIER KUNNEN MENSEN EEN RADIOSHOW MAKEN MET LIVE MUZIEKOPTREDENS, OF OVER DINGEN DIE ZE INTERESSANT VINDEN. ZE KUNNEN VERHALEN VERTELLEN EN OVER DINGEN PRATEN DIE BELANGRIJK VOOR HEN ZIJN.
+                p
+                    | ZE KUNNEN OOK MET GELUIDEN DIE ZE OPNEMEN EXPERIMENTEREN, OF MET HUN EIGEN STEM. BUG RADIO IS VOOR RADIOMAKERS MET VEEL ERVARING EN MENSEN DIE VOOR HET EERST EEN RADIO SHOW WILLEN MAKEN. MENSEN VAN ELKE LEEFTIJD OF NATIONALITEIT ZIJN WELKOM, EN DE SHOW KAN IN ELKE TAAL ZIJN.
+                p
+                    | ALS JE&nbsp;
+                    a(href="/open-call") HIER
+                    | &nbsp;KLIKT KUN JE EEN IDEE STUREN VOOR EEN SHOW DIE JE WILT MAKEN. HET MOET 15 OF 30 OF 45 OF 60 MINUTEN LANG ZIJN.
+                p
+                    | JE KUNT ONS OOK EEN E-MAIL STUREN NAAR&nbsp;
+                    a(href="mailto:info@bugradio.org") INFO@BUGRADIO.ORG
+                    | . WE ZIJN OOK OP&nbsp;
+                    a(href="https://instagram.com/bugradio" target="_blank") INSTAGRAM
+                    | &nbsp;EN&nbsp;
+                    a(href="https://facebook.com/bugradio" target="_blank") FACEBOOK
+                    | .
+
+    style.
+        /* ── EASY LANGUAGE BAR ─────────────────────────── */
+        .easy-language-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: 2.5rem 1.5rem 3rem;
+            align-items: flex-end;
+        }
+
+        .easy-lang-trigger {
+            position: relative;
+        }
+
+        .easy-lang-btn {
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            padding: 0.5rem 1.25rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .easy-lang-btn--en {
+            background: transparent;
+            color: #c1440e;
+            border: 2px solid #c1440e;
+        }
+        .easy-lang-btn--en:hover,
+        .easy-lang-btn--en.active {
+            background: #c1440e;
+            color: #fff;
+        }
+
+        .easy-lang-btn--nl {
+            background: transparent;
+            color: #e08c1a;
+            border: 2px solid #e08c1a;
+        }
+        .easy-lang-btn--nl:hover,
+        .easy-lang-btn--nl.active {
+            background: #e08c1a;
+            color: #fff;
+        }
+
+        /* Tooltip bubble */
+        .easy-lang-tooltip {
+            position: absolute;
+            bottom: calc(100% + 0.75rem);
+            left: 0;
+            width: min(460px, 90vw);
+            border-radius: 1.25rem;
+            padding: 2rem 1.75rem 1.75rem;
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        }
+
+        /* Coda del tooltip */
+        .easy-lang-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 2rem;
+            border-width: 10px 10px 0;
+            border-style: solid;
+        }
+
+        .easy-lang-tooltip--en {
+            background: #c1440e;
+            color: #fff;
+        }
+        .easy-lang-tooltip--en::after {
+            border-color: #c1440e transparent transparent;
+        }
+
+        .easy-lang-tooltip--nl {
+            background: #e08c1a;
+            color: #fff;
+        }
+        .easy-lang-tooltip--nl::after {
+            border-color: #e08c1a transparent transparent;
+        }
+
+        .easy-lang-tooltip p {
+            font-size: 0.875rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        .easy-lang-tooltip p:last-child { margin-bottom: 0; }
+
+        .easy-lang-tooltip a {
+            color: #fff;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .easy-lang-close {
+            position: absolute;
+            top: 0.6rem;
+            right: 0.75rem;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.65);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.2rem 0.35rem;
+            transition: color 0.15s;
+        }
+        .easy-lang-close:hover { color: #fff; }
+
+        /* Alpine transitions */
+        .tt-enter { transition: opacity 0.2s ease, transform 0.2s ease; }
+        .tt-start { opacity: 0; transform: translateY(6px); }
+        .tt-end   { opacity: 1; transform: translateY(0); }
+
+        /* Offline message */
+        .radio-offline {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            opacity: 0.4;
+            padding: 0.5rem 0;
+        }
+
+        .radio-offline i {
+            font-size: 0.75rem;
+        }
+
+        /* Mobile: tooltip diventa bottom sheet */
+        @media (max-width: 520px) {
+            .easy-lang-tooltip {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                border-radius: 1.25rem 1.25rem 0 0;
+                max-height: 72vh;
+                overflow-y: auto;
+            }
+            .easy-lang-tooltip::after { display: none; }
+        }

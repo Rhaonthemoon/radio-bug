@@ -19,22 +19,7 @@ block content
                     span GUARDA TUTTI
                     span GLI EVENTI
 
-                //- Player (same as home)
-                .player-sidebar(x-data="radioPlayer()" x-init="init()")
-                    .player-controls
-                        audio#player-audio-about(
-                            x-ref="audio"
-                            :src="streamUrl"
-                            preload="none"
-                            crossorigin="anonymous"
-                        )
-                        button.btn-play-sidebar(@click="togglePlay()")
-                            span.play-icon
-                                i.fa-solid.fa-play(x-show="!playing")
-                                i.fa-solid.fa-pause(x-show="playing")
-                    .player-text
-                        span.live-text LIVE
-                        span.stream-text STREAM
+                //- Player rimosso: ora globale nel layout
 
             //- Right side - Content
             .about-content-section

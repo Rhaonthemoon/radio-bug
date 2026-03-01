@@ -14,14 +14,14 @@ class AudioVisualizer {
         this.barColor = options.barColor || '#333';
         this.minHeight = options.minHeight || 2;
         this.maxHeight = options.maxHeight || 30;
-        
+
         this.audioContext = null;
         this.analyser = null;
         this.dataArray = null;
         this.isReal = false;
         this.animationId = null;
         this.bars = [];
-        
+
         this.init();
     }
 
@@ -55,11 +55,11 @@ class AudioVisualizer {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.analyser = this.audioContext.createAnalyser();
             this.analyser.fftSize = 64;
-            
+
             const source = this.audioContext.createMediaElementSource(this.audioElement);
             source.connect(this.analyser);
             this.analyser.connect(this.audioContext.destination);
-            
+
             this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
             this.isReal = true;
             console.log('Audio Visualizer: Using real frequency data');
@@ -73,7 +73,7 @@ class AudioVisualizer {
         if (this.audioContext && this.audioContext.state === 'suspended') {
             this.audioContext.resume();
         }
-        
+
         if (this.isReal) {
             this.animateReal();
         } else {
@@ -98,9 +98,9 @@ class AudioVisualizer {
     // Real visualizer using Web Audio API
     animateReal() {
         this.analyser.getByteFrequencyData(this.dataArray);
-        
+
         const step = Math.floor(this.dataArray.length / this.barCount);
-        
+
         for (let i = 0; i < this.barCount; i++) {
             const value = this.dataArray[i * step];
             const height = Math.max(this.minHeight, (value / 255) * this.maxHeight);
@@ -113,17 +113,17 @@ class AudioVisualizer {
     // Fake visualizer animation
     animateFake() {
         const time = Date.now() / 1000;
-        
+
         for (let i = 0; i < this.barCount; i++) {
             // Create organic-looking wave pattern
             const wave1 = Math.sin(time * 3 + i * 0.3) * 0.5 + 0.5;
             const wave2 = Math.sin(time * 5 + i * 0.5) * 0.3 + 0.5;
             const wave3 = Math.sin(time * 7 + i * 0.2) * 0.2 + 0.5;
             const random = Math.random() * 0.2;
-            
+
             const combined = (wave1 + wave2 + wave3 + random) / 2;
             const height = this.minHeight + combined * (this.maxHeight - this.minHeight);
-            
+
             this.bars[i].style.height = `${height}px`;
         }
 
@@ -137,24 +137,44 @@ class AudioVisualizer {
     }
 }
 
-// Auto-initialize if elements exist
+// Auto-initialize: supports both home player and global player bar
+function initVisualizer(audioId, containerId, barCount, barColor) {
+    const audio     = document.getElementById(audioId);
+    const container = document.getElementById(containerId);
+    if (!audio || !container) return null;
+
+    const visualizer = new AudioVisualizer({
+        audioElement: audio,
+        container:    container,
+        barCount:     barCount  || 32,
+        barColor:     barColor  || '#333'
+    });
+
+    audio.addEventListener('play',  () => visualizer.start());
+    audio.addEventListener('pause', () => visualizer.stop());
+    audio.addEventListener('ended', () => visualizer.stop());
+
+    return visualizer;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    const audio = document.querySelector('audio');
-    const container = document.getElementById('visualizer');
-    
-    if (audio && container) {
-        const visualizer = new AudioVisualizer({
-            audioElement: audio,
-            container: container,
-            barCount: 32,
-            barColor: '#333'
+    // Home page player
+    window.audioVisualizer = initVisualizer('player-audio', 'visualizer', 32, '#333');
+
+    // Global player bar (tutte le altre pagine)
+    window.globalAudioVisualizer = initVisualizer('global-player-audio', 'global-visualizer', 20, '#333');
+});
+
+// Alpine monta i template con x-if in modo asincrono:
+// aspettiamo che l'elemento audio del global player sia nel DOM
+document.addEventListener('DOMContentLoaded', () => {
+    if (!document.getElementById('global-player-audio')) {
+        const observer = new MutationObserver(() => {
+            if (document.getElementById('global-player-audio') && document.getElementById('global-visualizer')) {
+                window.globalAudioVisualizer = initVisualizer('global-player-audio', 'global-visualizer', 20, '#333');
+                observer.disconnect();
+            }
         });
-
-        audio.addEventListener('play', () => visualizer.start());
-        audio.addEventListener('pause', () => visualizer.stop());
-        audio.addEventListener('ended', () => visualizer.stop());
-
-        // Expose globally if needed
-        window.audioVisualizer = visualizer;
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 });

@@ -90,7 +90,12 @@ mixin episode-card(episode, options)
 //- Card per Schedule Item (versione compatta)
 mixin schedule-card(episode)
     .card.card--schedule
-        .card__time-badge= episode.time
+        .card__time-badge
+            if episode.showImage
+                img.card__schedule-img(src=episode.showImage alt=episode.showTitle || episode.title loading="lazy")
+            else
+                .card__schedule-placeholder
+            span.card__time-text= episode.time
 
         .card__body
             if episode.showSlug

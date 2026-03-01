@@ -77,6 +77,115 @@ html(lang="en")
                 font-size: 0.8rem;
             }
 
+            /* ── GLOBAL PLAYER BAR ─────────────────────── */
+            .global-player {
+                position: sticky;
+                top: 108px;
+                display: flex;
+                z-index: 90;
+            background: var(--color-bg, #fff);
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+                padding: 0.5rem 1.5rem;
+                min-height: 3rem;
+                justify-content: center;
+            }
+
+            .global-player-live {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .global-btn-play {
+                flex-shrink: 0;
+                width: 2.2rem;
+                height: 2.2rem;
+                border-radius: 50%;
+                border: 2px solid currentColor;
+                background: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.75rem;
+                transition: background 0.2s, color 0.2s;
+            }
+            .global-btn-play:hover {
+                background: currentColor;
+            }
+            .global-btn-play:hover i {
+                color: #fff;
+            }
+
+            .global-audio-visualizer {
+                flex-shrink: 0;
+                width: 60px;
+                height: 24px;
+            }
+
+            .global-player-meta {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.25rem 0.75rem;
+                min-width: 0;
+            }
+
+            .global-on-air {
+                font-size: 0.6rem;
+                font-weight: 700;
+                letter-spacing: 0.18em;
+                color: #e53935;
+                text-transform: uppercase;
+                flex-shrink: 0;
+            }
+
+            .global-show-name {
+                font-size: 0.75rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .global-track {
+                font-size: 0.75rem;
+                opacity: 0.6;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: flex;
+                align-items: center;
+            }
+
+            .global-track-title {
+                font-weight: 600;
+            }
+
+            .global-track-artist {
+                font-weight: 400;
+            }
+
+            .global-player-offline {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.16em;
+                text-transform: uppercase;
+                opacity: 0.35;
+            }
+
+            @media (max-width: 600px) {
+                .global-player { padding: 0.5rem 1rem; }
+                .global-audio-visualizer { display: none; }
+                .global-show-name,
+                .global-track { max-width: 180px; }
+            }
+
     body
         header.site-header
             .container
@@ -120,6 +229,9 @@ html(lang="en")
         //- Audio Visualizer
         script(src="/public/js/audio-visualizer.js")
 
+        //- PJAX — navigazione senza ricaricare il player
+        script(src="/public/js/pjax.js" defer)
+
         //- Mobile Menu Toggle
         script.
             function toggleMobileMenu() {
@@ -162,7 +274,7 @@ html(lang="en")
                     isLive: false,
                     streamUrl: 'https://bugradio2024.out.airtime.pro/bugradio2024_a',
                     apiUrl: 'https://bugradio2024.airtime.pro/api/live-info-v2',
-                    currentTrack: {title: '', artist: ''},
+                    currentTrack: { title: '', artist: '' },
                     currentShow: '',
                     metadataInterval: null,
 
@@ -177,28 +289,26 @@ html(lang="en")
                             this.$refs.audio.src = '';
                         } else {
                             this.$refs.audio.src = this.streamUrl;
-                            this.$refs.audio.play().catch(() => {
-                            });
+                            this.$refs.audio.play().catch(() => {});
                         }
                         this.playing = !this.playing;
                     },
 
                     async fetchMetadata() {
                         try {
-                            const response = await fetch(this.apiUrl, {cache: 'no-store'});
-                            if (!response.ok) throw new Error('API error');
-                            const data = await response.json();
+                            const res = await fetch(this.apiUrl, { cache: 'no-store' });
+                            if (!res.ok) throw new Error('API error');
+                            const data = await res.json();
 
-                            const currentShow = data.shows?.current;
-                            const currentTrack = data.tracks?.current;
+                            const show  = data.shows?.current;
+                            const track = data.tracks?.current;
 
-                            // Lo stream è live solo se l'API riporta uno show attivo
-                            this.isLive = !!(currentShow && currentShow.name);
+                            // isLive = true solo se Airtime riporta uno show attivo
+                            this.isLive = !!(show && show.name);
 
                             if (!this.isLive) {
-                                this.currentTrack = {title: '', artist: ''};
-                                this.currentShow = '';
-                                // Se stava suonando, ferma
+                                this.currentTrack = { title: '', artist: '' };
+                                this.currentShow  = '';
                                 if (this.playing) {
                                     this.$refs.audio.pause();
                                     this.$refs.audio.src = '';
@@ -207,22 +317,60 @@ html(lang="en")
                                 return;
                             }
 
+                            this.currentShow  = show.name || '';
                             this.currentTrack = {
-                                title: currentTrack?.name || '',
-                                artist: currentTrack?.metadata?.artist || ''
+                                title:  track?.name              || '',
+                                artist: track?.metadata?.artist  || ''
                             };
-                            this.currentShow = currentShow?.name || '';
 
-                        } catch (error) {
-                            // Nessuna risposta dall'API → offline
+                        } catch (err) {
+                            // API irraggiungibile → offline
                             this.isLive = false;
-                            this.currentTrack = {title: '', artist: ''};
-                            this.currentShow = '';
+                            this.currentTrack = { title: '', artist: '' };
+                            this.currentShow  = '';
                         }
                     }
                 }
             }
 
+        //- ── GLOBAL PLAYER BAR (nascosto in home via JS) ──────────
+        .global-player(x-data="radioPlayer()" x-init="init()")
+
+            template(x-if="isLive")
+                div.global-player-live
+                    //- Play button
+                    button.global-btn-play(@click="togglePlay()" aria-label="Play / Pause")
+                        i.fa-solid.fa-play(x-show="!playing")
+                        i.fa-solid.fa-pause(x-show="playing")
+
+                    //- Audio element
+                    audio#global-player-audio(
+                        x-ref="audio"
+                        :src="streamUrl"
+                        preload="none"
+                        crossorigin="anonymous"
+                    )
+
+                    //- Visualizer
+                    #global-visualizer.global-audio-visualizer
+
+                    //- Metadata
+                    .global-player-meta
+                        .global-on-air ON AIR
+                        template(x-if="currentShow")
+                            span.global-show-name(x-text="currentShow")
+                        template(x-if="currentTrack.title")
+                            .global-track
+                                span.global-track-title(x-text="currentTrack.title")
+                                template(x-if="currentTrack.artist")
+                                    span.global-track-artist
+                                        | &nbsp;—&nbsp;
+                                        span(x-text="currentTrack.artist")
+
+            template(x-if="!isLive")
+                .global-player-offline
+                    i.fa-regular.fa-circle-dot
+                    span RADIO IS OFFLINE
 
         main
             block content
