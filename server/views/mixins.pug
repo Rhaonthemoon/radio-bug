@@ -106,9 +106,6 @@ mixin schedule-card(episode)
             if episode.showTitle
                 span.card__show-name= episode.showTitle
 
-            if episode.description
-                p.card__description= episode.description.substring(0, 100) + (episode.description.length > 100 ? '...' : '')
-
 //- Grid container per card
 mixin card-grid(type)
     - var gridType = type || 'default'

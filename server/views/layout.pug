@@ -83,8 +83,8 @@ html(lang="en")
                 top: 108px;
                 display: flex;
                 z-index: 90;
-            background: var(--color-bg, #fff);
-            border-bottom: 1px solid rgba(0,0,0,0.08);
+                background: var(--color-bg, #fff);
+                border-bottom: 1px solid rgba(0,0,0,0.08);
                 padding: 0.5rem 1.5rem;
                 min-height: 3rem;
                 justify-content: center;
@@ -187,6 +187,177 @@ html(lang="en")
             }
 
     body
+
+        //- ── PAGE TRANSITION LOADER ──────────────────────────────
+        #page-loader(aria-hidden="true")
+            canvas#loader-canvas
+
+        style.
+            #page-loader {
+                position: fixed;
+                inset: 0;
+                z-index: 9999;
+                background: #fff;
+                opacity: 1;
+                pointer-events: all;
+                transition: opacity 0.4s ease;
+            }
+            #page-loader.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+            #loader-canvas {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+
+        script.
+            (function () {
+                var loader  = document.getElementById('page-loader');
+                var canvas  = document.getElementById('loader-canvas');
+                var ctx     = canvas.getContext('2d');
+                var phase   = 0;
+                var raf     = null;
+                var running = false;
+
+                // ── Resize canvas to real pixels ──────────────
+                function resize() {
+                    canvas.width  = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                }
+                window.addEventListener('resize', resize);
+                resize();
+
+                // ── Preload logo ──────────────────────────────
+                var logo = new Image();
+                logo.src = '/public/assets/logo.png';
+
+                // ── Draw one frame ────────────────────────────
+                function draw() {
+                    var W  = canvas.width;
+                    var H  = canvas.height;
+                    var cx = W / 2;
+                    var cy = H / 2;
+
+                    var maxR = Math.sqrt(cx * cx + cy * cy) * 1.05;
+                    var minR = Math.min(W, H) * 0.028;
+                    var N    = 22;
+
+                    ctx.clearRect(0, 0, W, H);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, W, H);
+
+                    for (var i = 0; i < N; i++) {
+                        var t      = (i + phase) / N;
+                        var r      = minR * Math.pow(maxR / minR, t);
+                        var weight = Math.pow(1 - t, 1.6);
+                        var lw     = 0.4 + weight * 11;
+                        var alpha  = 0.12 + (1 - t) * 0.88;
+
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
+                        ctx.lineWidth   = lw;
+                        ctx.stroke();
+                    }
+
+                    // ── Logo sincronizzato con i cerchi ───────
+                    if (logo.complete && logo.naturalWidth > 0) {
+                        var logoW = Math.min(W, H) * 0.22;
+                        var logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
+
+                        var scale = 1 + 0.1 * Math.pow(1 - phase, 3);
+
+                        ctx.save();
+                        ctx.translate(cx, cy);
+                        ctx.scale(scale, scale);
+                        ctx.drawImage(logo, -logoW / 2, -logoH / 2, logoW, logoH);
+                        ctx.restore();
+                    }
+
+                    phase = (phase + 0.018) % 1;
+                }
+
+                // ── Animation loop ────────────────────────────
+                function startLoop() {
+                    if (running) return;
+                    running = true;
+                    (function loop() {
+                        if (!running) return;
+                        draw();
+                        raf = requestAnimationFrame(loop);
+                    })();
+                }
+                function stopLoop() {
+                    running = false;
+                    if (raf) { cancelAnimationFrame(raf); raf = null; }
+                }
+
+                // ── Show / Hide con minimo 1s ─────────────
+                var shownAt   = Date.now();
+                var hideTimer = null;
+                var MIN_MS    = 1000;
+
+                function showLoader() {
+                    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+                    shownAt = Date.now();
+                    resize();
+                    startLoop();
+                    loader.classList.remove('hidden');
+                    console.log('[loader] show');
+                    // Safety: se nessun evento arriva, nascondi dopo 4s
+                    hideTimer = setTimeout(function() {
+                        console.log('[loader] safety timeout');
+                        loader.classList.add('hidden');
+                        setTimeout(stopLoop, 450);
+                        hideTimer = null;
+                    }, 1500);
+                }
+                function hideLoader() {
+                    if (loader.classList.contains('hidden')) return; // già nascosto
+                    var elapsed = Date.now() - shownAt;
+                    var delay   = Math.max(0, MIN_MS - elapsed);
+                    console.log('[loader] hideLoader called, delay=' + delay);
+                    if (hideTimer) clearTimeout(hideTimer);
+                    hideTimer = setTimeout(function () {
+                        loader.classList.add('hidden');
+                        console.log('[loader] hidden');
+                        setTimeout(stopLoop, 450);
+                    }, delay);
+                }
+
+                // ── Al caricamento iniziale parte subito ──────
+                startLoop();
+
+                // Tutti i modi possibili per rilevare che la pagina è pronta
+                window.addEventListener('load', hideLoader);
+                document.addEventListener('DOMContentLoaded', hideLoader);
+                // Nuclear fallback: se dopo 4s non è sparito, sparisce comunque
+                setTimeout(hideLoader, 1500);
+
+                // ── Hook PJAX events ──────────────────────────
+                document.addEventListener('pjax:send',     showLoader);
+                document.addEventListener('pjax:start',    showLoader);
+                document.addEventListener('pjax:complete', hideLoader);
+                document.addEventListener('pjax:end',      hideLoader);
+                document.addEventListener('pjax:success',  hideLoader);
+                document.addEventListener('pjax:error',    hideLoader);
+
+                // ── Fallback: click su link interni ───────────
+                document.addEventListener('click', function (e) {
+                    var a = e.target.closest('a[href]');
+                    if (!a) return;
+                    var href = a.getAttribute('href');
+                    if (!href
+                        || href.startsWith('#')
+                        || href.startsWith('mailto:')
+                        || href.startsWith('http')
+                        || a.target === '_blank') return;
+                    showLoader();
+                });
+            })();
+
         header.site-header
             .container
                 .header-top

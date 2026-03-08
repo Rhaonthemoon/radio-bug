@@ -208,7 +208,7 @@ const formData = reactive({
   title: '',
   content: '',
   excerpt: '',
-  category: 'news',
+  category: 'News',
   status: 'draft',
   featured: false,
   metaDescription: '',
@@ -216,10 +216,10 @@ const formData = reactive({
 })
 
 const categories = [
-  { label: 'News', value: 'news' },
-  { label: 'Event', value: 'event' },
-  { label: 'Announcement', value: 'announcement' },
-  { label: 'Blog', value: 'blog' }
+  { label: 'Live Events', value: 'Live Events' },
+  { label: 'News', value: 'News' },
+  { label: 'Streaming', value: 'Streaming' },
+  { label: 'Visit You Box', value: 'Visit You Box' }
 ]
 
 const statuses = [

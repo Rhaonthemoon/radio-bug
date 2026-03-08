@@ -150,7 +150,7 @@ router.get('/gallery', async (req, res) => {
             .select('title slug image category excerpt content publishedAt');
 
         // Raggruppa per categoria
-        const categories = ['all', 'event', 'news', 'announcement', 'blog'];
+        const categories = ['all', 'Live Events', 'News', 'Streaming', 'Visit You Box'];
 
         res.render('gallery', {
             title: 'Gallery - BUG Radio',

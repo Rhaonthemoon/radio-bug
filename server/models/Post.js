@@ -43,8 +43,8 @@ const PostSchema = new mongoose.Schema({
 
     category: {
         type: String,
-        enum: ['news', 'event', 'announcement', 'blog'],
-        default: 'news'
+        enum: ['Live Events', 'News', 'Streaming', 'Visit You Box'],
+        default: 'News'
     },
 
     // Autore

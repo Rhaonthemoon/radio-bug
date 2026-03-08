@@ -7,7 +7,7 @@
     --color-cyan: #4ecdc4;
     --color-gray: #666666;
     --color-light-gray: #f5f5f5;
-    --color-purple: #ca6dea;
+    --color-purple: #d13b90;
 
     --font-primary: 'Space Grotesk', sans-serif;
 
@@ -2383,4 +2383,22 @@ img {
     .lightbox-card__text {
         font-size: 0.85rem;
     }
+}
+/* Show cards in home — schedule style */
+.card--show-home {
+    text-decoration: none;
+    color: inherit;
+}
+
+.card--show-home .card__time-badge {
+    min-width: 100px;
+    width: 100px;
+}
+
+.card--show-home .card__title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+.card--show-home .card__schedule-img{
+    opacity: 1;
 }

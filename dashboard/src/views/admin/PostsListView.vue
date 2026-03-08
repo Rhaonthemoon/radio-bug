@@ -318,10 +318,10 @@ const filters = ref({
 })
 
 const categoryOptions = [
-  { label: 'News', value: 'news' },
-  { label: 'Event', value: 'event' },
-  { label: 'Announcement', value: 'announcement' },
-  { label: 'Blog', value: 'blog' }
+  { label: 'Live Events', value: 'Live Events' },
+  { label: 'News', value: 'News' },
+  { label: 'Streaming', value: 'Streaming' },
+  { label: 'Visit You Box', value: 'Visit You Box' }
 ]
 
 const statusOptions = [
@@ -512,21 +512,15 @@ const onSearch = () => {
 
 // Utility functions
 const getCategoryLabel = (category) => {
-  const map = {
-    news: 'News',
-    event: 'Event',
-    announcement: 'Announcement',
-    blog: 'Blog'
-  }
-  return map[category] || category
+  return category || ''
 }
 
 const getCategorySeverity = (category) => {
   const map = {
-    news: 'info',
-    event: 'success',
-    announcement: 'warning',
-    blog: 'secondary'
+    'Live Events': 'success',
+    'News': 'info',
+    'Streaming': 'warning',
+    'Visit You Box': 'secondary'
   }
   return map[category] || 'info'
 }

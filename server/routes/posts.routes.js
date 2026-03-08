@@ -5,6 +5,9 @@ const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { uploadSingle, handleUploadError, uploadImageToB2, deleteImageFromB2 } = require('../middleware/uploadImage');
 const path = require('path');
 
+// Categorie valide
+const VALID_CATEGORIES = ['Live Events', 'News', 'Streaming', 'Visit You Box'];
+
 // ==================== ROTTE PUBBLICHE ====================
 
 /**
@@ -129,6 +132,10 @@ router.post('/', authMiddleware, adminMiddleware, uploadSingle, handleUploadErro
             return res.status(400).json({ error: 'Image is required' });
         }
 
+        if (category && !VALID_CATEGORIES.includes(category)) {
+            return res.status(400).json({ error: `Invalid category. Valid categories: ${VALID_CATEGORIES.join(', ')}` });
+        }
+
         console.log(`📤 Upload immagine su Backblaze B2 per post "${title}"...`);
 
         // Upload su B2
@@ -147,7 +154,7 @@ router.post('/', authMiddleware, adminMiddleware, uploadSingle, handleUploadErro
             title,
             content,
             excerpt,
-            category: category || 'news',
+            category: category || 'News',
             status: status || 'draft',
             featured: featured === 'true',
             metaDescription,
@@ -196,6 +203,10 @@ router.put('/:id', authMiddleware, adminMiddleware, uploadSingle, handleUploadEr
         }
 
         // Aggiorna campi
+        if (category && !VALID_CATEGORIES.includes(category)) {
+            return res.status(400).json({ error: `Invalid category. Valid categories: ${VALID_CATEGORIES.join(', ')}` });
+        }
+
         if (title) post.title = title;
         if (content) post.content = content;
         if (excerpt !== undefined) post.excerpt = excerpt;

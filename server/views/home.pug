@@ -34,16 +34,21 @@ block content
             a.read-more(href="/schedule") ▶ SEE FULL SCHEDULE
 
         .shows-section
-            h2.section-title
-                span.title-shows SHOWS
+            h2.section-title(style="margin-bottom:1.5rem")
+                img.about-blob-img(src="/public/assets/blob-show.png")
 
             if shows && shows.length
-                each show in shows.slice(0, 4)
-                    a.card.card--show.card-home(href=`/shows/${show.slug}`)
-                        .card-grid.card-grid--compact
-                            strong= show.artist.name
-                            if show.artist.bio && cardSize !== 'compact'
-                                span.card__artist-bio= show.artist.bio.substring(0, 60) + (show.artist.bio.length > 60 ? '...' : '')
+                each show in shows.slice(0, 6)
+                    a.card.card--schedule.card--show-home(href=`/shows/${show.slug}` style="margin-bottom:1rem")
+                        .card__time-badge
+                            if show.image && show.image.url
+                                img.card__schedule-img(src=show.image.url alt=show.title loading="lazy")
+                            else
+                                .card__schedule-placeholder
+                        .card__body
+                            strong.card__title= show.artist.name
+                            if show.title
+                                span.card__show-name= show.title
             else
                 p.no-shows No shows available yet
 
