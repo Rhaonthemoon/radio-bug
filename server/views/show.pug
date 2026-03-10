@@ -64,46 +64,67 @@ block content
                                 if episode.description
                                     p.episode-description= episode.description.substring(0, 200) + (episode.description.length > 200 ? '...' : '')
 
-                            .episode-actions
-                                //- Usa URL diretto se disponibile (B2/Cloudinary), altrimenti fallback locale
-                                if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
-                                    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
-                                    button.btn-play-episode(
-                                        data-audio=audioUrl
-                                        aria-label="Play episode"
-                                    )
-                                        span ▶
+                            if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
+                                - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
+                                .episode-player-mini(x-data="episodePlayer()")
+                                    audio(x-ref="audio" src=audioUrl preload="none")
+                                    .player-main
+                                        button.btn-play-large(@click="togglePlay")
+                                            span(x-show="!playing") ▶
+                                            span(x-show="playing") ⏸
+                                        .player-progress
+                                            .progress-bar(@click="seek($event)")
+                                                .progress-fill(:style="`width: ${progress}%`")
+                                            .time-info
+                                                span(x-text="formatTime(currentTime)")
+                                                span(x-text="formatTime(duration)")
 
+                            .episode-actions
                                 if episode.externalLinks && episode.externalLinks.mixcloudUrl
                                     a.external-link(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Mixcloud
             else
                 p.no-episodes No episodes available for this show yet.
+        script.
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('episodePlayer', () => ({
+                    playing: false,
+                    currentTime: 0,
+                    duration: 0,
+                    progress: 0,
 
-        .back-link
-            a(href="/shows") ← Back to all shows
+                    init() {
+                        const audio = this.$refs.audio;
+                        if (!audio) return;
+                        audio.addEventListener('loadedmetadata', () => {
+                            this.duration = audio.duration;
+                        });
+                        audio.addEventListener('timeupdate', () => {
+                            this.currentTime = audio.currentTime;
+                            this.progress = (audio.currentTime / audio.duration) * 100;
+                        });
+                        audio.addEventListener('ended', () => {
+                            this.playing = false;
+                            this.progress = 0;
+                        });
+                    },
 
-    //- Episode player script
-    script.
-        document.querySelectorAll('.btn-play-episode').forEach(btn => {
-            let isPlaying = false;
-            btn.addEventListener('click', function() {
-                const audioSrc = this.dataset.audio;
-                if (!window.episodeAudio) {
-                    window.episodeAudio = new Audio();
-                }
+                    togglePlay() {
+                        const audio = this.$refs.audio;
+                        this.playing ? audio.pause() : audio.play();
+                        this.playing = !this.playing;
+                    },
 
-                if (isPlaying && window.episodeAudio.src.includes(audioSrc)) {
-                    window.episodeAudio.pause();
-                    this.querySelector('span').textContent = '▶';
-                    isPlaying = false;
-                } else {
-                    // Stop any other playing audio
-                    document.querySelectorAll('.btn-play-episode span').forEach(s => s.textContent = '▶');
+                    seek(event) {
+                        const bar = event.currentTarget;
+                        this.$refs.audio.currentTime = (event.offsetX / bar.offsetWidth) * this.$refs.audio.duration;
+                    },
 
-                    window.episodeAudio.src = audioSrc;
-                    window.episodeAudio.play();
-                    this.querySelector('span').textContent = '⏸';
-                    isPlaying = true;
-                }
+                    formatTime(seconds) {
+                        if (!seconds || isNaN(seconds)) return '0:00';
+                        const mins = Math.floor(seconds / 60);
+                        const secs = Math.floor(seconds % 60);
+                        return `${mins}:${secs.toString().padStart(2, '0')}`;
+                    }
+                }));
             });
-        });
+

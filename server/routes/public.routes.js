@@ -101,7 +101,6 @@ router.get('/shows', async (req, res) => {
                     status: 'published'
                 })
                     .sort({ airDate: -1 })
-                    .limit(10);
 
                 return {
                     ...show.toObject(),
@@ -182,7 +181,6 @@ router.get('/shows/:slug', async (req, res) => {
             status: 'published'
         })
             .sort({ airDate: -1 })
-            .limit(10);
 
         res.render('show', {
             title: `${show.title} - BUG Radio`,

@@ -331,29 +331,16 @@ const statusOptions = [
 ]
 
 const filteredPosts = computed(() => {
-  let result = posts.value
+  // category e status sono gestiti lato backend
+  // qui filtriamo solo per la ricerca testuale
+  if (!searchQuery.value) return posts.value
 
-  // Filter by category
-  if (filters.value.category) {
-    result = result.filter(p => p.category === filters.value.category)
-  }
-
-  // Filter by status
-  if (filters.value.status) {
-    result = result.filter(p => p.status === filters.value.status)
-  }
-
-  // Filter by search
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(p =>
-      p.title.toLowerCase().includes(query) ||
-      p.excerpt?.toLowerCase().includes(query) ||
-      p.content.toLowerCase().includes(query)
-    )
-  }
-
-  return result
+  const query = searchQuery.value.toLowerCase()
+  return posts.value.filter(p =>
+    p.title.toLowerCase().includes(query) ||
+    p.excerpt?.toLowerCase().includes(query) ||
+    p.content.toLowerCase().includes(query)
+  )
 })
 
 const loadPosts = async () => {
@@ -361,10 +348,15 @@ const loadPosts = async () => {
   emptyStateMessage.value = 'Loading...'
 
   try {
-    console.log('🔍 Loading posts from:', `${apiUrl}/posts`)
+    const params = new URLSearchParams()
+    if (filters.value.category) params.append('category', filters.value.category)
+    if (filters.value.status) params.append('status', filters.value.status)
+
+    const url = `${apiUrl}/posts/admin/all?${params.toString()}`
+    console.log('🔍 Loading posts from:', url)
     console.log('🔑 Token exists:', !!token)
 
-    const response = await fetch(`${apiUrl}/posts`, {
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

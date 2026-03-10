@@ -1119,6 +1119,7 @@ main {
     border: 1px solid var(--color-light-gray);
     border-radius: var(--radius-md);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    flex-direction: column;
 }
 
 .episode-item:hover {
@@ -1287,11 +1288,14 @@ main {
 
 .player-main {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 16px;
-    margin-bottom: 16px;
+    width: 100%;
 }
-
+.episode-player-mini {
+    background: black;
+    padding: 5px 15px;
+}
 .btn-play-large {
     width: 56px;
     height: 56px;
@@ -1453,15 +1457,19 @@ main {
     padding: 48px 24px;
     margin-top: 48px;
 }
-
+img.footer-partner {
+    width: 280px;
+}
 .footer-top {
     display: flex;
     justify-content: center;
-    gap: 80px;
+    gap: 20px;
     text-align: center;
     margin-bottom: 24px;
 }
-
+.footer-top > * {
+    flex: 0 0 257px;
+}
 .footer-section h3 {
     font-size: 18px;
     margin-bottom: 8px;
