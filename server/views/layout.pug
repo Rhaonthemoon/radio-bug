@@ -366,10 +366,10 @@ html(lang="en")
                     nav.main-nav
                         a(href="/" class=currentPath === '/' ? 'active' : '') HOME
                         a(href="/about" class=currentPath === '/about' ? 'active' : '') ABOUT
-                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/shows" class=currentPath === '/shows' ? 'active' : '') SHOWS
                         a(href="/schedule" class=currentPath === '/schedule' ? 'active' : '') SCHEDULE
                         a(href="/open-call" class=currentPath === '/open-call' ? 'active' : '') OPEN CALL
+                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/education" class=currentPath === '/education' ? 'active' : '') EDUCATION
                         a(href="/partners" class=currentPath === '/partners' ? 'active' : '') PARTNERS
 
@@ -390,10 +390,10 @@ html(lang="en")
                     nav.mobile-nav
                         a(href="/" class=currentPath === '/' ? 'active' : '') HOME
                         a(href="/about" class=currentPath === '/about' ? 'active' : '') ABOUT
-                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/shows" class=currentPath === '/shows' ? 'active' : '') SHOWS
                         a(href="/schedule" class=currentPath === '/schedule' ? 'active' : '') SCHEDULE
                         a(href="/open-call" class=currentPath === '/open-call' ? 'active' : '') OPEN CALL
+                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/education" class=currentPath === '/education' ? 'active' : '') EDUCATION
                         a(href="/partners" class=currentPath === '/partners' ? 'active' : '') PARTNERS
 
@@ -552,8 +552,11 @@ html(lang="en")
                     h3 JOIN OUR COMMUNITY
                     a(href="/open-call") SUBMIT YOUR SHOW
                 .footer-section
-                    h3 BUG RADIO IS SUPPORTED BY...
-                    a(href="/partners") PARTNERS
+                    h3 BUG Radio is generously supported by
+                    a(href="https://www.stimuleringsfonds.nl/")
+                        img.footer-partner(src="/public/assets/parnthner-footer.png")
 
             .footer-bottom
                 p © #{new Date().getFullYear()} BUG Radio
+
+    script(src="/js/episode-player.js")

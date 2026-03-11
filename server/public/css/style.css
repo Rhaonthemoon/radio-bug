@@ -1294,7 +1294,8 @@ main {
 }
 .episode-player-mini {
     background: black;
-    padding: 5px 15px;
+    padding: 10px 15px;
+    border-radius: 11px;
 }
 .btn-play-large {
     width: 56px;
@@ -1302,8 +1303,9 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-white);
-    color: var(--color-black);
+    background: var(--color-purple);
+    color: var(--color-white);
+    border: solid 2px;
     border-radius: var(--radius-full);
     font-size: 20px;
     transition: transform var(--transition-fast);
@@ -1323,11 +1325,12 @@ main {
     border-radius: 4px;
     cursor: pointer;
     margin-bottom: 8px;
+    border: solid 2px;
 }
 
 .progress-fill {
     height: 100%;
-    background: var(--color-white);
+    background: var(--color-purple);
     border-radius: 4px;
     transition: width 0.1s linear;
 }
