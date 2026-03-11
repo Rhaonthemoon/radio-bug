@@ -85,8 +85,8 @@ block content
             else
                 p.no-episodes No episodes available for this show yet.
         script.
-            document.addEventListener('alpine:init', () => {
-                Alpine.data('episodePlayer', () => ({
+            function episodePlayer() {
+                return {
                     playing: false,
                     currentTime: 0,
                     duration: 0,
@@ -125,6 +125,6 @@ block content
                         const secs = Math.floor(seconds % 60);
                         return `${mins}:${secs.toString().padStart(2, '0')}`;
                     }
-                }));
-            });
+                };
+            }
 

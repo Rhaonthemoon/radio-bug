@@ -25,6 +25,7 @@ html(lang="en")
 
         //- Alpine.js
         script(defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js")
+
         style.
             /* Now Playing Metadata Styles */
             .now-playing {
@@ -213,160 +214,137 @@ html(lang="en")
 
         script.
             (function () {
-                var loader = document.getElementById('page-loader');
-                var canvas = document.getElementById('loader-canvas');
-                var ctx = canvas.getContext('2d');
-                var raf = null;
+                var loader  = document.getElementById('page-loader');
+                var canvas  = document.getElementById('loader-canvas');
+                var ctx     = canvas.getContext('2d');
+                var phase   = 0;
+                var raf     = null;
                 var running = false;
 
-                // ── Timing fasi ───────────────────────────────
-                var EXPAND_MS = 750;
-                var PULSE_MS = 200;   // ← richiesto
-                var COLLAPSE_MS = 750;
-                var TOTAL_MS = EXPAND_MS + PULSE_MS + COLLAPSE_MS;
-                var animStart = null;
-
+                // ── Resize canvas to real pixels ──────────────
                 function resize() {
-                    canvas.width = window.innerWidth;
+                    canvas.width  = window.innerWidth;
                     canvas.height = window.innerHeight;
                 }
-
                 window.addEventListener('resize', resize);
                 resize();
 
+                // ── Preload logo ──────────────────────────────
                 var logo = new Image();
                 logo.src = '/public/assets/logo.png';
 
-                function easeOutCubic(t) {
-                    return 1 - Math.pow(1 - t, 3);
-                }
+                // ── Draw one frame ────────────────────────────
+                function draw() {
+                    var W  = canvas.width;
+                    var H  = canvas.height;
+                    var cx = W / 2;
+                    var cy = H / 2;
 
-                function easeInCubic(t) {
-                    return t * t * t;
-                }
-
-                function draw(now) {
-                    if (!animStart) animStart = now;
-                    var elapsed = (now - animStart) % TOTAL_MS;
-
-                    var W = canvas.width, H = canvas.height;
-                    var cx = W / 2, cy = H / 2;
-                    var maxR = Math.sqrt(cx * cx + cy * cy) * 1.08;
+                    var maxR = Math.sqrt(cx * cx + cy * cy) * 1.05;
+                    var minR = Math.min(W, H) * 0.028;
+                    var N    = 22;
 
                     ctx.clearRect(0, 0, W, H);
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, W, H);
 
-                    var r, lw, alpha, logoScale;
+                    for (var i = 0; i < N; i++) {
+                        var t      = (i + phase) / N;
+                        var r      = minR * Math.pow(maxR / minR, t);
+                        var weight = Math.pow(1 - t, 1.6);
+                        var lw     = 0.4 + weight * 11;
+                        var alpha  = 0.12 + (1 - t) * 0.88;
 
-                    if (elapsed < EXPAND_MS) {
-                        // ── ESPANSIONE: pallino → pieno schermo ──
-                        var p = easeOutCubic(elapsed / EXPAND_MS);
-                        r = 2 + p * (maxR - 2);
-                        alpha = 0.06 + (1 - p) * 0.30;
-                        lw = 1.5 + (1 - p) * 7;
-                        logoScale = 0.82 + p * 0.18;
-
-                    } else if (elapsed < EXPAND_MS + PULSE_MS) {
-                        // ── PULSAZIONE 0.5 s ─────────────────────
-                        var p = (elapsed - EXPAND_MS) / PULSE_MS;
-                        var wave = Math.sin(p * Math.PI * 2);   // 1 oscillazione completa
-                        r = maxR * (1 + wave * 0.025);
-                        alpha = 0.07 + wave * 0.03;
-                        lw = 1;
-                        logoScale = 1 + wave * 0.04;
-
-                    } else {
-                        // ── CHIUSURA: torna a pallino ─────────────
-                        var p = easeInCubic((elapsed - EXPAND_MS - PULSE_MS) / COLLAPSE_MS);
-                        r = maxR * (1 - p) + 2 * p;
-                        alpha = 0.07 * (1 - p) + 0.55 * p;
-                        lw = 1.5 + p * 7;
-                        logoScale = 1 - 0.18 * p;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
+                        ctx.lineWidth   = lw;
+                        ctx.stroke();
                     }
 
-                    // ── Cerchio ───────────────────────────────────
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, Math.max(r, 1), 0, Math.PI * 2);
-                    ctx.strokeStyle = 'rgba(0,0,0,' + alpha.toFixed(3) + ')';
-                    ctx.lineWidth = lw;
-                    ctx.stroke();
-
-                    // ── Logo ──────────────────────────────────────
+                    // ── Logo sincronizzato con i cerchi ───────
                     if (logo.complete && logo.naturalWidth > 0) {
                         var logoW = Math.min(W, H) * 0.22;
                         var logoH = logoW * (logo.naturalHeight / logo.naturalWidth);
+
+                        var scale = 1 + 0.1 * Math.pow(1 - phase, 3);
+
                         ctx.save();
                         ctx.translate(cx, cy);
-                        ctx.scale(logoScale, logoScale);
+                        ctx.scale(scale, scale);
                         ctx.drawImage(logo, -logoW / 2, -logoH / 2, logoW, logoH);
                         ctx.restore();
                     }
+
+                    phase = (phase + 0.018) % 1;
                 }
 
+                // ── Animation loop ────────────────────────────
                 function startLoop() {
                     if (running) return;
                     running = true;
-                    animStart = null;
-                    (function loop(now) {
+                    (function loop() {
                         if (!running) return;
-                        draw(now);
+                        draw();
                         raf = requestAnimationFrame(loop);
-                    })(performance.now());
+                    })();
                 }
-
                 function stopLoop() {
                     running = false;
-                    if (raf) {
-                        cancelAnimationFrame(raf);
-                        raf = null;
-                    }
+                    if (raf) { cancelAnimationFrame(raf); raf = null; }
                 }
 
-                var shownAt = Date.now();
+                // ── Show / Hide con minimo 1s ─────────────
+                var shownAt   = Date.now();
                 var hideTimer = null;
-                var MIN_MS = 1000;
+                var MIN_MS    = 1000;
 
                 function showLoader() {
-                    if (hideTimer) {
-                        clearTimeout(hideTimer);
-                        hideTimer = null;
-                    }
+                    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
                     shownAt = Date.now();
                     resize();
                     startLoop();
                     loader.classList.remove('hidden');
-                    hideTimer = setTimeout(function () {
+                    console.log('[loader] show');
+                    // Safety: se nessun evento arriva, nascondi dopo 4s
+                    hideTimer = setTimeout(function() {
+                        console.log('[loader] safety timeout');
                         loader.classList.add('hidden');
                         setTimeout(stopLoop, 450);
                         hideTimer = null;
                     }, 1500);
                 }
-
                 function hideLoader() {
-                    if (loader.classList.contains('hidden')) return;
+                    if (loader.classList.contains('hidden')) return; // già nascosto
                     var elapsed = Date.now() - shownAt;
-                    var delay = Math.max(0, MIN_MS - elapsed);
+                    var delay   = Math.max(0, MIN_MS - elapsed);
+                    console.log('[loader] hideLoader called, delay=' + delay);
                     if (hideTimer) clearTimeout(hideTimer);
                     hideTimer = setTimeout(function () {
                         loader.classList.add('hidden');
+                        console.log('[loader] hidden');
                         setTimeout(stopLoop, 450);
                     }, delay);
                 }
 
+                // ── Al caricamento iniziale parte subito ──────
                 startLoop();
 
+                // Tutti i modi possibili per rilevare che la pagina è pronta
                 window.addEventListener('load', hideLoader);
                 document.addEventListener('DOMContentLoaded', hideLoader);
+                // Nuclear fallback: se dopo 4s non è sparito, sparisce comunque
                 setTimeout(hideLoader, 1500);
 
-                document.addEventListener('pjax:send', showLoader);
-                document.addEventListener('pjax:start', showLoader);
+                // ── Hook PJAX events ──────────────────────────
+                document.addEventListener('pjax:send',     showLoader);
+                document.addEventListener('pjax:start',    showLoader);
                 document.addEventListener('pjax:complete', hideLoader);
-                document.addEventListener('pjax:end', hideLoader);
-                document.addEventListener('pjax:success', hideLoader);
-                document.addEventListener('pjax:error', hideLoader);
+                document.addEventListener('pjax:end',      hideLoader);
+                document.addEventListener('pjax:success',  hideLoader);
+                document.addEventListener('pjax:error',    hideLoader);
 
+                // ── Fallback: click su link interni ───────────
                 document.addEventListener('click', function (e) {
                     var a = e.target.closest('a[href]');
                     if (!a) return;
@@ -379,6 +357,7 @@ html(lang="en")
                     showLoader();
                 });
             })();
+
         header.site-header
             .container
                 .header-top
@@ -387,10 +366,10 @@ html(lang="en")
                     nav.main-nav
                         a(href="/" class=currentPath === '/' ? 'active' : '') HOME
                         a(href="/about" class=currentPath === '/about' ? 'active' : '') ABOUT
+                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/shows" class=currentPath === '/shows' ? 'active' : '') SHOWS
                         a(href="/schedule" class=currentPath === '/schedule' ? 'active' : '') SCHEDULE
                         a(href="/open-call" class=currentPath === '/open-call' ? 'active' : '') OPEN CALL
-                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/education" class=currentPath === '/education' ? 'active' : '') EDUCATION
                         a(href="/partners" class=currentPath === '/partners' ? 'active' : '') PARTNERS
 
@@ -411,10 +390,10 @@ html(lang="en")
                     nav.mobile-nav
                         a(href="/" class=currentPath === '/' ? 'active' : '') HOME
                         a(href="/about" class=currentPath === '/about' ? 'active' : '') ABOUT
+                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/shows" class=currentPath === '/shows' ? 'active' : '') SHOWS
                         a(href="/schedule" class=currentPath === '/schedule' ? 'active' : '') SCHEDULE
                         a(href="/open-call" class=currentPath === '/open-call' ? 'active' : '') OPEN CALL
-                        a(href="/gallery" class=currentPath === '/gallery' ? 'active' : '') GALLERY
                         a(href="/education" class=currentPath === '/education' ? 'active' : '') EDUCATION
                         a(href="/partners" class=currentPath === '/partners' ? 'active' : '') PARTNERS
 
@@ -573,11 +552,8 @@ html(lang="en")
                     h3 JOIN OUR COMMUNITY
                     a(href="/open-call") SUBMIT YOUR SHOW
                 .footer-section
-                    h3 BUG Radio is generously supported by
-                    a(href="https://www.stimuleringsfonds.nl/")
-                        img.footer-partner(src="/public/assets/parnthner-footer.png")
+                    h3 BUG RADIO IS SUPPORTED BY...
+                    a(href="/partners") PARTNERS
 
             .footer-bottom
                 p © #{new Date().getFullYear()} BUG Radio
-
-    script(src="/js/episode-player.js")
