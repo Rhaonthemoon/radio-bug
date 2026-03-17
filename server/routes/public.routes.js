@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
         now.setHours(0, 0, 0, 0);
 
         const upcomingEpisodes = await Episode.find({
-            status: 'published',
+            status: { $in: ['published', 'archived'] },
             airDate: { $gte: now }
         })
             .populate('showId', 'title slug image')
@@ -98,7 +98,7 @@ router.get('/shows', async (req, res) => {
             shows.map(async (show) => {
                 const episodes = await Episode.find({
                     showId: show._id,
-                    status: 'published'
+                    status: { $in: ['published', 'archived'] }
                 })
                     .sort({ airDate: -1 })
 
@@ -177,7 +177,8 @@ router.get('/shows/:slug', async (req, res) => {
 
         // Ultimi 10 episodi dello show
         const episodes = await Episode.find({
-            showId: show._id
+            showId: show._id,
+            status: { $in: ['published', 'archived'] }
         })
             .sort({ airDate: -1 })
 
@@ -196,7 +197,8 @@ router.get('/shows/:slug', async (req, res) => {
 router.get('/episodes/:id', async (req, res) => {
     try {
         const episode = await Episode.findOne({
-            _id: req.params.id
+            _id: req.params.id,
+            status: { $in: ['published', 'archived'] }
         }).populate('showId', 'title slug artist image');
 
         if (!episode) {
@@ -206,7 +208,7 @@ router.get('/episodes/:id', async (req, res) => {
         // Altri episodi dello stesso show
         const relatedEpisodes = await Episode.find({
             showId: episode.showId._id,
-            status: 'published',
+            status: { $in: ['published', 'archived'] },
             _id: { $ne: episode._id }
         })
             .sort({ airDate: -1 })
