@@ -64,7 +64,7 @@ block content
                                 if episode.description
                                     p.episode-description= episode.description.substring(0, 200) + (episode.description.length > 200 ? '...' : '')
 
-                            if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
+                            if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists) && episode.status==='archived'
                                 - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
                                 .episode-player-mini(x-data="episodePlayer()")
                                     audio(x-ref="audio" src=audioUrl preload="none")

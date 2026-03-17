@@ -17,40 +17,41 @@ block content
                 .episode-date= new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 
                 if episode.duration
-                    .episode-duration Duration: #{Math.floor(episode.duration / 60)} min
+                    .episode-duration Duration: #{episode.duration} min
 
         //- Player principale
-        .episode-player(x-data="episodePlayer()")
-            //- Usa URL diretto se disponibile (B2/Cloudinary), altrimenti fallback locale
-            if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
-                - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
-                audio#player-audio-episode(x-ref="audio" src=audioUrl preload="none" crossorigin="anonymous")
+        if episode.status === 'archived'
+            .episode-player(x-data="episodePlayer()")
+                //- Usa URL diretto se disponibile (B2/Cloudinary), altrimenti fallback locale
+                if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists)
+                    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
+                    audio#player-audio-episode(x-ref="audio" src=audioUrl preload="none" crossorigin="anonymous")
 
-                .player-main
-                    button.btn-play-large(@click="togglePlay")
-                        span(x-show="!playing") ▶
-                        span(x-show="playing") ⏸
+                    .player-main
+                        button.btn-play-large(@click="togglePlay")
+                            span(x-show="!playing") ▶
+                            span(x-show="playing") ⏸
 
-                    .player-progress
-                        .progress-bar(@click="seek($event)")
-                            .progress-fill(:style="`width: ${progress}%`")
-                        .time-info
-                            span(x-text="formatTime(currentTime)")
-                            span(x-text="formatTime(duration)")
+                        .player-progress
+                            .progress-bar(@click="seek($event)")
+                                .progress-fill(:style="`width: ${progress}%`")
+                            .time-info
+                                span(x-text="formatTime(currentTime)")
+                                span(x-text="formatTime(duration)")
 
-                    .volume-control
-                        button(@click="toggleMute")
-                            span(x-show="!muted") 🔊
-                            span(x-show="muted") 🔇
-                        input(type="range" min="0" max="100" x-model="volume" @input="setVolume")
+                        .volume-control
+                            button(@click="toggleMute")
+                                span(x-show="!muted") 🔊
+                                span(x-show="muted") 🔇
+                            input(type="range" min="0" max="100" x-model="volume" @input="setVolume")
 
-            .external-players
-                if episode.externalLinks && episode.externalLinks.mixcloudUrl
-                    a.external-btn.mixcloud(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Listen on Mixcloud
-                if episode.externalLinks && episode.externalLinks.spotifyUrl
-                    a.external-btn.spotify(href=episode.externalLinks.spotifyUrl target="_blank" rel="noopener") Listen on Spotify
-                if episode.externalLinks && episode.externalLinks.youtubeUrl
-                    a.external-btn.youtube(href=episode.externalLinks.youtubeUrl target="_blank" rel="noopener") Watch on YouTube
+                .external-players
+                    if episode.externalLinks && episode.externalLinks.mixcloudUrl
+                        a.external-btn.mixcloud(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Listen on Mixcloud
+                    if episode.externalLinks && episode.externalLinks.spotifyUrl
+                        a.external-btn.spotify(href=episode.externalLinks.spotifyUrl target="_blank" rel="noopener") Listen on Spotify
+                    if episode.externalLinks && episode.externalLinks.youtubeUrl
+                        a.external-btn.youtube(href=episode.externalLinks.youtubeUrl target="_blank" rel="noopener") Watch on YouTube
 
         //- Descrizione
         if episode.description

@@ -177,8 +177,7 @@ router.get('/shows/:slug', async (req, res) => {
 
         // Ultimi 10 episodi dello show
         const episodes = await Episode.find({
-            showId: show._id,
-            status: 'published'
+            showId: show._id
         })
             .sort({ airDate: -1 })
 
@@ -197,8 +196,7 @@ router.get('/shows/:slug', async (req, res) => {
 router.get('/episodes/:id', async (req, res) => {
     try {
         const episode = await Episode.findOne({
-            _id: req.params.id,
-            status: 'published'
+            _id: req.params.id
         }).populate('showId', 'title slug artist image');
 
         if (!episode) {
@@ -239,7 +237,6 @@ router.get('/schedule', async (req, res) => {
 
         // Fetch tutti gli episodi del mese
         const monthEpisodes = await Episode.find({
-            status: 'published',
             airDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
         })
             .populate('showId', 'title slug image')
