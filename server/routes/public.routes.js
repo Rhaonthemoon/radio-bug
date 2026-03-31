@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
                 title: episode.title,
                 showTitle: episode.showId?.title || null,
                 showSlug: episode.showId?.slug || null,
-                showImage: episode.showId?.image?.url || null,
+                showImage: episode.image.url?episode.image.url:episode.showId?.image?.url || null,
                 description: episode.description || null
             });
         });
