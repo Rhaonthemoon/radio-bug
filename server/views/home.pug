@@ -131,6 +131,9 @@ block content
                     | &nbsp;EN&nbsp;
                     a(href="https://facebook.com/bugradio" target="_blank") FACEBOOK
                     | .
+    .contact-bar
+        img.instagram(src="/public/assets/insta.png")
+        img.on-air-img(src="/public/assets/onair-onsite.png")
 
     style.
         /* ── EASY LANGUAGE BAR ─────────────────────────── */
@@ -140,8 +143,19 @@ block content
             flex-wrap: wrap;
             padding: 2.5rem 1.5rem 3rem;
             align-items: flex-end;
+            flex-direction: row;
+            justify-content: center;
         }
 
+        .contact-bar {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .contact-bar img {
+            width: 72px;
+        }
         .easy-lang-trigger {
             position: relative;
         }

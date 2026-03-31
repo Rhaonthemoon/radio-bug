@@ -4,9 +4,13 @@ include mixins
 block content
     section.episode-detail
         .episode-hero
-            if episode.showId && episode.showId.image && episode.showId.image.url
+            if episode.image && episode.image.url
                 .episode-cover
-                    img(src=episode.showId.image.url alt=episode.title)
+                    img(src=episode.image.url alt=episode.title)
+            else
+                if episode.showId && episode.showId.image && episode.showId.image.url
+                    .episode-cover
+                        img(src=episode.showId.image.url alt=episode.title)
 
             .episode-meta
                 if episode.showId

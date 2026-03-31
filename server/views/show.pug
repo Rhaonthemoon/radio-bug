@@ -57,31 +57,35 @@ block content
                 .episodes-full-list
                     each episode in episodes
                         .episode-item
-                            .episode-info
-                                h3.episode-title
-                                    a(href=`/episodes/${episode._id}`)= episode.title
-                                span.episode-date= new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-                                if episode.description
-                                    p.episode-description= episode.description.substring(0, 200) + (episode.description.length > 200 ? '...' : '')
+                            .episode-img.show-cover
+                                if episode.image && episode.image.url
+                                        img(src=episode.image.url alt=episode.title)
+                                else
+                                    p=episode.showIo
+                                    if show.image.url
+                                            img(src=show.image.url alt=episode.title)
+                            .episode-content
+                                .episode-info
+                                    h3.episode-title
+                                        a(href=`/episodes/${episode._id}`)= episode.title
+                                    span.episode-date= new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                                    if episode.description
+                                        p.episode-description= episode.description.substring(0, 150) + (episode.description.length > 150 ? '...' : '')
 
-                            if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists) && episode.status==='archived'
-                                - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
-                                .episode-player-mini(x-data="episodePlayer()")
-                                    audio(x-ref="audio" src=audioUrl preload="none")
-                                    .player-main
-                                        button.btn-play-large(@click="togglePlay")
-                                            span(x-show="!playing") ▶
-                                            span(x-show="playing") ⏸
-                                        .player-progress
-                                            .progress-bar(@click="seek($event)")
-                                                .progress-fill(:style="`width: ${progress}%`")
-                                            .time-info
-                                                span(x-text="formatTime(currentTime)")
-                                                span(x-text="formatTime(duration)")
-
-                            .episode-actions
-                                if episode.externalLinks && episode.externalLinks.mixcloudUrl
-                                    a.external-link(href=episode.externalLinks.mixcloudUrl target="_blank" rel="noopener") Mixcloud
+                                if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists) && episode.status==='archived'
+                                    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
+                                    .episode-player-mini(x-data="episodePlayer()")
+                                        audio(x-ref="audio" src=audioUrl preload="none")
+                                        .player-main
+                                            button.btn-play-large(@click="togglePlay")
+                                                span(x-show="!playing") ▶
+                                                span(x-show="playing") ⏸
+                                            .player-progress
+                                                .progress-bar(@click="seek($event)")
+                                                    .progress-fill(:style="`width: ${progress}%`")
+                                                .time-info
+                                                    span(x-text="formatTime(currentTime)")
+                                                    span(x-text="formatTime(duration)")
             else
                 p.no-episodes No episodes available for this show yet.
         script.

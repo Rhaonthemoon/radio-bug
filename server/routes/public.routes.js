@@ -101,7 +101,6 @@ router.get('/shows', async (req, res) => {
                     status: { $in: ['published', 'archived'] }
                 })
                     .sort({ airDate: -1 })
-
                 return {
                     ...show.toObject(),
                     episodes
@@ -181,7 +180,7 @@ router.get('/shows/:slug', async (req, res) => {
             status: { $in: ['published', 'archived'] }
         })
             .sort({ airDate: -1 })
-
+        console.log(episodes);
         res.render('show', {
             title: `${show.title} - BUG Radio`,
             show,
@@ -239,6 +238,7 @@ router.get('/schedule', async (req, res) => {
 
         // Fetch tutti gli episodi del mese
         const monthEpisodes = await Episode.find({
+            status: { $in: ['published', 'archived'] },
             airDate: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
         })
             .populate('showId', 'title slug image')
@@ -285,7 +285,7 @@ router.get('/schedule', async (req, res) => {
         for (const dateKey in groupedByDate) {
             scheduleByDay.push(groupedByDate[dateKey]);
         }
-        scheduleByDay.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+        scheduleByDay.sort((a, b) => b.dateKey.localeCompare(a.dateKey));
 
         // Genera dati per il calendario
         const calendarDays = generateCalendarDays(year, month, groupedByDate);

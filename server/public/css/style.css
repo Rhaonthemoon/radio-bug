@@ -1113,22 +1113,27 @@ main {
 /* Episode Item (in show detail) */
 .episode-item {
     display: flex;
+    flex-direction: row;
     gap: 16px;
     padding: 16px;
     background: var(--color-white);
     border: 1px solid var(--color-light-gray);
     border-radius: var(--radius-md);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-    flex-direction: column;
 }
 
 .episode-item:hover {
     border-color: var(--color-purple);
     box-shadow: var(--shadow-sm);
 }
-
-.episode-info {
+.episode-img {
     flex: 1;
+    min-width: 0;
+}
+.episode-content {
+    display: flex;
+    flex-direction: column;
+    flex: 3;
     min-width: 0;
 }
 
@@ -1310,7 +1315,9 @@ main {
     font-size: 20px;
     transition: transform var(--transition-fast);
 }
-
+.show-detail p {
+    white-space: pre-line;
+}
 .btn-play-large:hover {
     transform: scale(1.05);
 }
@@ -1692,9 +1699,11 @@ body.menu-open {
 
     .episode-item {
         flex-direction: column;
+    }
+    .episode-content{
+        flex-direction: column;
         gap: 12px;
     }
-
     .episode-actions {
         width: 100%;
         justify-content: flex-start;
