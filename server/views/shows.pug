@@ -17,9 +17,42 @@ block content
             //- Right side - Shows cards grid
             .shows-content-section
                 if shows && shows.length
+                    //- Filter & Sort controls
+                    .shows-controls
+                        .shows-controls-row
+                            .filter-group
+                                label.filter-label Genre
+                                select#genre-filter.filter-select
+                                    option(value="all") All Genres
+                                    each genre in allGenres
+                                        option(value=genre)= genre
+
+                            .filter-group(style="display:none")
+                                label.filter-label Day
+                                select#day-filter.filter-select
+                                    option(value="all") All Days
+                                    each day in allDays
+                                        option(value=day)= day
+                        .shows-controls-row
+                            .filter-group.filter-group--search
+                                label.filter-label Search
+                                input#search-filter.filter-input(type="text" placeholder="Search shows...")
+
+                            .filter-group
+                                label.filter-label Sort by
+                                select#sort-select.filter-select
+                                    option(value="random") Random
+                                    option(value="title-asc") Title A-Z
+                                    option(value="title-desc") Title Z-A
+                                    option(value="newest") Newest
+                                    option(value="oldest") Oldest
+
                     .card-grid.card-grid--shows
                         each show in shows
                             +show-card(show)
+
+                    .no-results(style="display:none")
+                        p No shows match your filters
                 else
                     .no-content
                         p No shows available yet
@@ -28,3 +61,79 @@ block content
         section.join-community
             h2 JOIN OUR COMMUNITY
             a.submit-link(href="/open-call") SUBMIT YOUR SHOW
+
+    script.
+        (function() {
+            const grid = document.querySelector('.card-grid--shows');
+            if (!grid) return;
+            const cards = Array.from(grid.children);
+            const noResults = document.querySelector('.no-results');
+            console.log(cards)
+            // Shuffle on load (Fisher-Yates)
+            function shuffle(arr) {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            // Extract title from cards (genres and day already in data attributes from server)
+            cards.forEach(card => {
+                card.dataset.title = (card.querySelector('.card__title') || {}).textContent || '';
+            });
+
+            // Shuffle on first load
+            shuffle(cards).forEach(c => grid.appendChild(c));
+
+            const genreFilter = document.getElementById('genre-filter');
+            const dayFilter = document.getElementById('day-filter');
+            const searchFilter = document.getElementById('search-filter');
+            const sortSelect = document.getElementById('sort-select');
+
+            function applyFilters() {
+                const genre = genreFilter.value;
+                const day = dayFilter.value;
+                const search = searchFilter.value.toLowerCase().trim();
+                const sort = sortSelect.value;
+
+                let visible = cards.filter(card => {
+                    if (genre !== 'all') {
+                        const genres = (card.dataset.genres || '').split('|||').filter(Boolean);
+                        if (!genres.includes(genre)) return false;
+                    }
+                    if (day !== 'all' && card.dataset.day !== day) return false;
+                    if (search && !card.dataset.title.toLowerCase().includes(search)) return false;
+                    return true;
+                });
+
+                // Sort
+                if (sort === 'random') {
+                    shuffle(visible);
+                } else if (sort === 'title-asc') {
+                    visible.sort((a, b) => a.dataset.title.localeCompare(b.dataset.title));
+                } else if (sort === 'title-desc') {
+                    visible.sort((a, b) => b.dataset.title.localeCompare(a.dataset.title));
+                }
+                // newest/oldest: keep server order (createdAt desc) or reverse
+                if (sort === 'oldest') {
+                    visible.reverse();
+                }
+
+                // Hide all, then show filtered in order
+                cards.forEach(c => c.style.display = 'none');
+                visible.forEach(c => {
+                    c.style.display = '';
+                    grid.appendChild(c);
+                });
+
+                if (noResults) {
+                    noResults.style.display = visible.length === 0 ? 'block' : 'none';
+                }
+            }
+
+            genreFilter.addEventListener('change', applyFilters);
+            dayFilter.addEventListener('change', applyFilters);
+            searchFilter.addEventListener('input', applyFilters);
+            sortSelect.addEventListener('change', applyFilters);
+        })();

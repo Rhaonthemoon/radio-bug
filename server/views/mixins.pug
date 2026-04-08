@@ -4,7 +4,7 @@
 //- Card per Show (usato in shows.pug e home.pug)
 mixin show-card(show, size)
     - var cardSize = size || 'default'
-    a.card.card--show(href=`/shows/${show.slug}` class=`card--${cardSize}`)
+    a.card.card--show(href=`/shows/${show.slug}` class=`card--${cardSize}` data-genres=(show.genres || []).join('|||') data-day=(show.schedule && show.schedule.dayOfWeek || ''))
         .card__cover
             if show.image && show.image.url
                 img(src=show.image.url alt=show.image.alt || show.title loading="lazy")
@@ -98,8 +98,8 @@ mixin schedule-card(episode)
             span.card__time-text= episode.time
 
         .card__body
-            if episode.showSlug
-                a.card__title(href=`/shows/${episode.showSlug}`)= episode.title
+            if episode.id
+                a.card__title(href=`/episodes/${episode.id}`)= episode.title
             else
                 span.card__title= episode.title
 

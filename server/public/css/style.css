@@ -923,6 +923,68 @@ main {
     padding-top: 20px;
 }
 
+/* Shows Filter & Sort Controls */
+.shows-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.shows-controls-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group--search {
+    flex: 1;
+    min-width: 140px;
+}
+
+.filter-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text, #333);
+    opacity: 0.6;
+}
+
+.filter-select,
+.filter-input {
+    padding: 8px 12px;
+    border: 2px solid var(--color-black, #000);
+    border-radius: 6px;
+    background: var(--color-white, #fff);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-black, #000);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+    outline: none;
+    border-color: var(--color-primary, #ff4444);
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 16px;
+    opacity: 0.6;
+}
+
 /* Join Community */
 .join-community {
     text-align: center;
@@ -1163,6 +1225,7 @@ main {
     color: var(--color-gray);
     line-height: 1.5;
     margin: 0;
+    white-space: pre-line;
 }
 
 .episode-actions {
@@ -1407,6 +1470,7 @@ main {
 .episode-detail .episode-description p {
     color: var(--color-gray);
     line-height: 1.7;
+    white-space: pre-line;
 }
 
 /* Related Episodes */
@@ -1633,6 +1697,14 @@ body.menu-open {
 
     .card-grid--shows {
         grid-template-columns: 1fr;
+    }
+
+    .shows-controls-row {
+        flex-direction: column;
+    }
+
+    .filter-group {
+        width: 100%;
     }
 }
 

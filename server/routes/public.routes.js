@@ -92,7 +92,7 @@ router.get('/shows', async (req, res) => {
             requestStatus: 'approved',
             status: 'active'
         }).sort({ createdAt: -1 });
-
+        console.log(shows)
         // Carica ultimi 10 episodi per ogni show
         const showsWithEpisodes = await Promise.all(
             shows.map(async (show) => {
@@ -108,9 +108,16 @@ router.get('/shows', async (req, res) => {
             })
         );
 
+        // Estrai generi e giorni unici dagli show attivi
+        const allGenres = [...new Set(shows.flatMap(s => s.genres || []))].sort();
+        const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const allDays = daysOrder.filter(d => shows.some(s => s.schedule && s.schedule.dayOfWeek === d));
+
         res.render('shows', {
             title: 'Shows - BUG Radio',
-            shows: showsWithEpisodes
+            shows: showsWithEpisodes,
+            allGenres,
+            allDays
         });
     } catch (err) {
         console.error('Shows error:', err);
