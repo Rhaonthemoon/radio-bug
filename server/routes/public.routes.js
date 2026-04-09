@@ -205,7 +205,7 @@ router.get('/episodes/:id', async (req, res) => {
         const episode = await Episode.findOne({
             _id: req.params.id,
             status: { $in: ['published', 'archived'] }
-        }).populate('showId', 'title slug artist image');
+        }).populate('showId', 'title slug artist image schedule');
 
         if (!episode) {
             return res.status(404).send('Episodio non trovato');
@@ -276,10 +276,7 @@ router.get('/schedule', async (req, res) => {
 
             groupedByDate[dateKey].episodes.push({
                 id: episode._id,
-                time: airDate.toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }),
+                time: airDate.toLocaleTimeString('en-GB', {hour: '2-digit',minute: '2-digit'}),
                 title: episode.title,
                 showTitle: episode.showId?.title || null,
                 showSlug: episode.showId?.slug || null,

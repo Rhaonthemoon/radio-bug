@@ -1341,6 +1341,30 @@ main {
     color: var(--color-gray);
 }
 
+.episode-artist {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.episode-artist-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full, 50%);
+    object-fit: cover;
+}
+
+.episode-artist-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-black, #000);
+}
+
+.episode-schedule {
+    font-size: 0.9rem;
+    color: var(--color-gray);
+}
+
 .episode-duration {
     font-size: 0.9rem;
     color: var(--color-gray);

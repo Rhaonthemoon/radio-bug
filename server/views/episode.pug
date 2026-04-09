@@ -15,10 +15,12 @@ block content
             .episode-meta
                 if episode.showId
                     a.show-link(href=`/shows/${episode.showId.slug}`)= episode.showId.title
+                     span=" - "+ episode.showId.artist.name
 
                 h1.episode-title= episode.title
 
                 .episode-date= new Date(episode.airDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                    span.episode-schedule #{" - "+episode.airDate.toLocaleTimeString('en-GB', {hour: '2-digit',minute: '2-digit'})}
 
                 if episode.duration
                     .episode-duration Duration: #{episode.duration} min
