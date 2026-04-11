@@ -203,6 +203,29 @@ router.get('/public/:id/stream', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/episodes/public/:id/play
+ * Incrementa il contatore plays (una volta per sessione, gestito lato client)
+ */
+router.post('/public/:id/play', async (req, res) => {
+    try {
+        const episode = await Episode.findByIdAndUpdate(
+            req.params.id,
+            { $inc: { 'stats.plays': 1 } },
+            { new: true }
+        );
+
+        if (!episode) {
+            return res.status(404).json({ error: 'Episodio non trovato' });
+        }
+
+        res.json({ plays: episode.stats.plays });
+    } catch (error) {
+        console.error('Errore play tracking:', error);
+        res.status(500).json({ error: 'Errore nel tracking' });
+    }
+});
+
 // ==================== ROTTE PROTETTE - VISUALIZZAZIONE ====================
 
 /**

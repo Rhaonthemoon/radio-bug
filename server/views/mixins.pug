@@ -111,3 +111,32 @@ mixin card-grid(type)
     - var gridType = type || 'default'
     .card-grid(class=`card-grid--${gridType}`)
         block
+
+//- Player audio unificato per episodi
+//- variant: 'full' (pagina episodio, con volume/mute) o 'mini' (lista in show page)
+mixin episode-player(episode, variant)
+    - var playerVariant = variant || 'full'
+    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
+    - var episodeId = episode._id.toString()
+    - var plays = episode.stats && episode.stats.plays || 0
+    div(class=playerVariant === 'full' ? 'episode-player' : 'episode-player-mini' x-data=`episodePlayer('${episodeId}', ${plays})`)
+        audio(x-ref="audio" src=audioUrl preload="none")
+        .player-main
+            button.btn-play-large(@click="togglePlay")
+                span(x-show="!playing") ▶
+                span(x-show="playing") ⏸
+            .player-progress
+                .progress-bar(@click="seek($event)")
+                    .progress-fill(:style="`width: ${progress}%`")
+                .time-info
+                    span(x-text="formatTime(currentTime)")
+                    span(x-text="formatTime(duration)")
+            if playerVariant === 'full'
+                .volume-control
+                    button(@click="toggleMute")
+                        span(x-show="!muted") 🔊
+                        span(x-show="muted") 🔇
+                    input(type="range" min="0" max="100" x-model="volume" @input="setVolume")
+        .episode-plays
+            span 🎧
+            span(x-text="plays + ' ' + (plays === 1 ? 'listen' : 'listens')")

@@ -1370,6 +1370,15 @@ main {
     color: var(--color-gray);
 }
 
+.episode-plays {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--color-gray);
+    margin-top: 12px;
+}
+
 /* Episode Player */
 .episode-player {
     background: var(--color-black);
@@ -1388,6 +1397,12 @@ main {
     background: black;
     padding: 10px 15px;
     border-radius: 11px;
+}
+
+.episode-player-mini .episode-plays {
+    color: #aaa;
+    font-size: 0.8rem;
+    margin-top: 8px;
 }
 .btn-play-large {
     width: 56px;

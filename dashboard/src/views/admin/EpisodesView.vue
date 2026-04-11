@@ -75,6 +75,15 @@
             </template>
           </Column>
 
+          <Column field="stats.plays" header="Plays" sortable style="width: 90px;">
+            <template #body="{ data }">
+              <div class="plays-cell">
+                <i class="pi pi-headphones"></i>
+                {{ data.stats?.plays || 0 }}
+              </div>
+            </template>
+          </Column>
+
           <Column header="Mixcloud" style="width: 130px;">
             <template #body="{ data }">
               <div class="mixcloud-cell">
@@ -963,6 +972,18 @@ onMounted(async () => {
 
 .show-cell i {
   color: #3b82f6;
+}
+
+.plays-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.plays-cell i {
+  font-size: 0.8rem;
 }
 
 .mixcloud-cell {

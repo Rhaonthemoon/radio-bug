@@ -73,62 +73,8 @@ block content
                                         p.episode-description= episode.description.substring(0, 150) + (episode.description.length > 150 ? '...' : '')
 
                                 if episode.audioFile && (episode.audioFile.url || episode.audioFile.exists) && episode.status==='archived'
-                                    - var audioUrl = episode.audioFile.url || `/uploads/episodes/${episode.audioFile.storedFilename}`
-                                    .episode-player-mini(x-data="episodePlayer()")
-                                        audio(x-ref="audio" src=audioUrl preload="none")
-                                        .player-main
-                                            button.btn-play-large(@click="togglePlay")
-                                                span(x-show="!playing") ▶
-                                                span(x-show="playing") ⏸
-                                            .player-progress
-                                                .progress-bar(@click="seek($event)")
-                                                    .progress-fill(:style="`width: ${progress}%`")
-                                                .time-info
-                                                    span(x-text="formatTime(currentTime)")
-                                                    span(x-text="formatTime(duration)")
+                                    +episode-player(episode, 'mini')
             else
                 p.no-episodes No episodes available for this show yet.
-        script.
-            function episodePlayer() {
-                return {
-                    playing: false,
-                    currentTime: 0,
-                    duration: 0,
-                    progress: 0,
 
-                    init() {
-                        const audio = this.$refs.audio;
-                        if (!audio) return;
-                        audio.addEventListener('loadedmetadata', () => {
-                            this.duration = audio.duration;
-                        });
-                        audio.addEventListener('timeupdate', () => {
-                            this.currentTime = audio.currentTime;
-                            this.progress = (audio.currentTime / audio.duration) * 100;
-                        });
-                        audio.addEventListener('ended', () => {
-                            this.playing = false;
-                            this.progress = 0;
-                        });
-                    },
-
-                    togglePlay() {
-                        const audio = this.$refs.audio;
-                        this.playing ? audio.pause() : audio.play();
-                        this.playing = !this.playing;
-                    },
-
-                    seek(event) {
-                        const bar = event.currentTarget;
-                        this.$refs.audio.currentTime = (event.offsetX / bar.offsetWidth) * this.$refs.audio.duration;
-                    },
-
-                    formatTime(seconds) {
-                        if (!seconds || isNaN(seconds)) return '0:00';
-                        const mins = Math.floor(seconds / 60);
-                        const secs = Math.floor(seconds % 60);
-                        return `${mins}:${secs.toString().padStart(2, '0')}`;
-                    }
-                };
-            }
 
