@@ -834,11 +834,22 @@ const closePreview = () => {
 }
 const downloadAudio = async () => {
   if (!previewEpisode.value) return
-  const url = getAudioUrl(previewEpisode.value._id)
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${previewEpisode.value.title}.mp3`;
-  link.click()
+  const episodeId = previewEpisode.value._id
+  const episodeTitle = previewEpisode.value.title
+  try {
+    const response = await api.get(`/episodes/${episodeId}/download`, {
+      responseType: 'blob'
+    })
+    const blob = new Blob([response.data], { type: 'audio/mpeg' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${episodeTitle}.mp3`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Errore download:', err)
+  }
 }
 
 // ==================== HELPERS ====================
@@ -885,6 +896,8 @@ const formatFrequency = (frequency) => {
     'weekly': 'Weekly',
     'biweekly': 'Bi-weekly',
     'monthly': 'Monthly',
+    'bimonthly': 'Every two months',
+    'quarterly': 'Quarterly',
     'onetime': 'One-time'
   }
   return map[frequency] || frequency

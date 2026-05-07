@@ -353,6 +353,8 @@ const frequencyOptions = [
   { label: 'Settimanale', value: 'weekly' },
   { label: 'Bisettimanale', value: 'biweekly' },
   { label: 'Mensile', value: 'monthly' },
+  { label: 'Ogni due mesi', value: 'bimonthly' },
+  { label: 'Trimestrale', value: 'quarterly' },
   { label: 'Una tantum', value: 'onetime' }
 ]
 

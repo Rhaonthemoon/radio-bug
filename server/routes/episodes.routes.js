@@ -226,6 +226,52 @@ router.post('/public/:id/play', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/episodes/:id/download
+ * Proxy download da B2 con nome file = titolo episodio (solo admin)
+ */
+router.get('/:id/download', authMiddleware, async (req, res) => {
+    let tempFile = null;
+    try {
+        const episode = await Episode.findById(req.params.id);
+
+        if (!episode || !episode.audioFile) {
+            return res.status(404).json({ error: 'Audio non trovato' });
+        }
+
+        // Slug del titolo per il nome file
+        const safeTitle = episode.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        const filename = `${safeTitle}.mp3`;
+
+        // Se non c'è b2Key ma c'è un URL diretto, redirect con header filename
+        if (!episode.audioFile.b2Key && episode.audioFile.url) {
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            return res.redirect(episode.audioFile.url);
+        }
+
+        if (!episode.audioFile.b2Key) {
+            return res.status(404).json({ error: 'Audio non trovato' });
+        }
+
+        tempFile = await downloadFromB2Temp(episode.audioFile.b2Key);
+
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.download(tempFile.path, filename, async (err) => {
+            if (err) console.error('Errore invio file:', err.message);
+            await tempFile.cleanup();
+        });
+
+    } catch (error) {
+        console.error('Errore download episodio:', error.message);
+        if (tempFile) await tempFile.cleanup();
+        res.status(500).json({ error: 'Errore nel download' });
+    }
+});
+
 // ==================== ROTTE PROTETTE - VISUALIZZAZIONE ====================
 
 /**

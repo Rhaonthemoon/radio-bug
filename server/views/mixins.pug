@@ -120,7 +120,7 @@ mixin episode-player(episode, variant)
     - var episodeId = episode._id.toString()
     - var plays = episode.stats && episode.stats.plays || 0
     div(class=playerVariant === 'full' ? 'episode-player' : 'episode-player-mini' x-data=`episodePlayer('${episodeId}', ${plays})`)
-        audio(x-ref="audio" src=audioUrl preload="none")
+        audio(x-ref="audio" src=audioUrl preload="metadata")
         .player-main
             button.btn-play-large(@click="togglePlay")
                 span(x-show="!playing") ▶

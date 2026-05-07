@@ -1571,17 +1571,22 @@ main {
     margin-top: 48px;
 }
 img.footer-partner {
-    width: 280px;
+    width: 168px;
 }
 .footer-top {
     display: flex;
-    justify-content: center;
     gap: 20px;
     text-align: center;
-    margin-bottom: 24px;
+    justify-content: center;
+    flex-direction: column;
 }
 .footer-top > * {
-    flex: 0 0 257px;
+
+}
+.footer-section {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 .footer-section h3 {
     font-size: 18px;
@@ -1597,7 +1602,12 @@ img.footer-partner {
     color: var(--color-gray);
     font-size: 14px;
 }
-
+.footer-section.left{
+    text-align: right;
+}
+.footer-section.right{
+    text-align: left;
+}
 /* ==================== HAMBURGER MENU ==================== */
 .hamburger-btn {
     display: none;
@@ -1703,6 +1713,28 @@ body.menu-open {
     padding: 1rem 0.75rem;
 }
 /* ==================== RESPONSIVE ==================== */
+@media (max-width: 1716px) {
+    body {
+
+        background-size: 15%;
+    }
+
+    /* Layer sfondo sinistro indipendente dalla cartella sfondi-sx */
+    body::before {
+        width: 15%;
+    }
+}
+@media (max-width: 1440px) {
+    body {
+
+        background-size: 13%;
+    }
+
+    /* Layer sfondo sinistro indipendente dalla cartella sfondi-sx */
+    body::before {
+        width: 13%;
+    }
+}
 @media (max-width: 900px) {
     .main-content {
         grid-template-columns: 1fr;
@@ -1769,7 +1801,15 @@ body.menu-open {
         flex-direction: column;
         gap: 24px;
     }
-
+    .footer-top > * {
+        flex: 0 0 auto;
+    }
+    .footer-section{
+        flex-direction: column;
+    }
+    img.footer-partner {
+        margin: auto;
+    }
     .about-preview {
         flex-direction: column;
     }

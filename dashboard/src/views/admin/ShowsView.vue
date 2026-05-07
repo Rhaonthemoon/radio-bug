@@ -723,6 +723,8 @@ const frequencyOptions = [
   { label: 'Weekly', value: 'weekly' },
   { label: 'Bi-weekly', value: 'biweekly' },
   { label: 'Monthly', value: 'monthly' },
+  { label: 'Every two months', value: 'bimonthly' },
+  { label: 'Quarterly', value: 'quarterly' },
   { label: 'One-time', value: 'onetime' }
 ]
 
