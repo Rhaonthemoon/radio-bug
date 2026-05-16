@@ -8,6 +8,7 @@ const fs = require('fs');
 const {
     authMiddleware, adminMiddleware
 } = require('../middleware/auth');
+const Settings = require('../models/Settings');
 
 // ==================== CONFIG ====================
 const AIRTIME_URL = process.env.AIRTIME_URL || 'http://localhost';
@@ -615,6 +616,34 @@ router.get('/test-connection', authMiddleware, adminMiddleware, async (req, res)
             error: error.message,
             airtimeUrl: AIRTIME_URL
         });
+    }
+});
+
+/**
+ * GET /api/admin/streaming/site-enabled
+ * Restituisce se lo streaming è abilitato su questo sito (admin)
+ */
+router.get('/site-enabled', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const enabled = await Settings.get('streaming_site_enabled', true);
+        res.json({ enabled });
+    } catch (error) {
+        res.status(500).json({ error: 'Errore nel recupero impostazione' });
+    }
+});
+
+/**
+ * POST /api/admin/streaming/toggle-site
+ * Attiva/disattiva lo streaming sul sito pubblico (admin)
+ */
+router.post('/toggle-site', authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+        const current = await Settings.get('streaming_site_enabled', true);
+        const newValue = !current;
+        await Settings.set('streaming_site_enabled', newValue);
+        res.json({ enabled: newValue });
+    } catch (error) {
+        res.status(500).json({ error: 'Errore nel toggle impostazione' });
     }
 });
 

@@ -276,6 +276,31 @@
               </div>
             </div>
 
+            <!-- Site streaming toggle -->
+            <div class="control-group">
+              <label>Player sul sito pubblico</label>
+              <div class="site-toggle-row">
+                <div
+                    class="site-toggle-status"
+                    :class="streamSiteEnabled ? 'status-on' : 'status-off'"
+                >
+                  <i :class="streamSiteEnabled ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+                  <span>{{ streamSiteEnabled ? 'Abilitato' : 'Disabilitato' }}</span>
+                </div>
+                <Button
+                    :label="streamSiteEnabled ? 'Disabilita' : 'Abilita'"
+                    :icon="streamSiteEnabled ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                    :severity="streamSiteEnabled ? 'danger' : 'success'"
+                    @click="toggleSiteStreaming"
+                    :loading="loadingSiteToggle"
+                    outlined
+                />
+              </div>
+              <small class="hint-text">
+                Nasconde/mostra il player radio sul sito pubblico indipendentemente da Airtime.
+              </small>
+            </div>
+
             <Button
                 label="Refresh Status"
                 icon="pi pi-refresh"
@@ -588,6 +613,10 @@ const calendarOptions = ref({
   },
   eventColor: '#667eea'
 })
+
+// Site streaming toggle
+const streamSiteEnabled = ref(true)
+const loadingSiteToggle = ref(false)
 
 // Audio Player
 const audioPlayer = ref(null)
@@ -1095,6 +1124,42 @@ const confirmMarkUploaded = async () => {
   }
 }
 
+// Site streaming toggle methods
+const loadSiteEnabled = async () => {
+  try {
+    const response = await api.get('/admin/streaming/site-enabled')
+    streamSiteEnabled.value = response.data.enabled
+  } catch (error) {
+    console.error('Error loading site streaming state:', error)
+  }
+}
+
+const toggleSiteStreaming = async () => {
+  loadingSiteToggle.value = true
+  try {
+    const response = await api.post('/admin/streaming/toggle-site')
+    streamSiteEnabled.value = response.data.enabled
+    toast.add({
+      severity: streamSiteEnabled.value ? 'success' : 'warn',
+      summary: streamSiteEnabled.value ? 'Streaming abilitato' : 'Streaming disabilitato',
+      detail: streamSiteEnabled.value
+        ? 'Il player è ora visibile sul sito pubblico'
+        : 'Il player è ora nascosto sul sito pubblico',
+      life: 3000
+    })
+  } catch (error) {
+    console.error('Error toggling site streaming:', error)
+    toast.add({
+      severity: 'error',
+      summary: 'Errore',
+      detail: 'Impossibile modificare lo stato dello streaming',
+      life: 3000
+    })
+  } finally {
+    loadingSiteToggle.value = false
+  }
+}
+
 // Audio Player Methods
 const togglePlay = async () => {
   if (!audioPlayer.value) {
@@ -1188,6 +1253,7 @@ onMounted(() => {
   loadStatistics()
   loadWeekSchedule()
   loadUploadedEpisodes()
+  loadSiteEnabled()
 
   // Initialize audio player
   if (audioPlayer.value) {
@@ -1546,6 +1612,38 @@ onUnmounted(() => {
 
 .info-display i {
   color: #3b82f6;
+}
+
+/* Site toggle */
+.site-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.site-toggle-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.925rem;
+}
+
+.status-on {
+  color: #10b981;
+}
+
+.status-off {
+  color: #ef4444;
+}
+
+.hint-text {
+  color: #9ca3af;
+  font-size: 0.8rem;
 }
 
 /* Statistics */

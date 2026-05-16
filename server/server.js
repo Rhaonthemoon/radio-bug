@@ -72,6 +72,18 @@ app.use('/api/episodes', episodesRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin/streaming', streamingRoutes);
 app.use('/api/posts', postsRoutes);
+
+// Endpoint pubblico (no auth) — il player del sito controlla se lo streaming è abilitato
+app.get('/api/streaming/site-enabled', async (req, res) => {
+    try {
+        const Settings = require('./models/Settings');
+        const enabled = await Settings.get('streaming_site_enabled', true);
+        res.json({ enabled });
+    } catch (error) {
+        res.json({ enabled: true }); // fallback: mostra il player
+    }
+});
+
 app.use('/', publicRoutes);
 
 // ==================== HEALTH CHECK ====================
